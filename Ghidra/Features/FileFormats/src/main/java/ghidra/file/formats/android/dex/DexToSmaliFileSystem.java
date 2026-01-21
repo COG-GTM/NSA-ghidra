@@ -18,6 +18,7 @@ package ghidra.file.formats.android.dex;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.AccessMode;
+import java.security.SecureRandom;
 import java.util.*;
 
 import org.apache.commons.io.FileUtils;
@@ -89,7 +90,7 @@ public class DexToSmaliFileSystem extends GFileSystemBase {
 	public void open(TaskMonitor monitor) throws IOException, CryptoException, CancelledException {
 		monitor.setMessage("Converting DEX to SMALI...");
 
-		int rand = new Random().nextInt() & 0xffff;
+		int rand = new SecureRandom().nextInt() & 0xffff;
 		File outputDir = new File(Application.getUserTempDirectory(), "ghidra_file_system_" + rand);
 
 		DexFile dexFile =

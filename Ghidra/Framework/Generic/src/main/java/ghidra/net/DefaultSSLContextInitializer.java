@@ -127,6 +127,12 @@ public class DefaultSSLContextInitializer implements ModuleInitializer {
 	 * <code>HttpsHostnameVerifier</code> is required by HttpsURLConnection even
 	 * if it does nothing.  The verify method will only be invoked if the default 
 	 * behavior fails the connection attempt due to a hostname mismatch.
+	 * <p>
+	 * Security Note (CWE-295): This verifier performs proper hostname verification
+	 * by delegating to the default HTTPS hostname verifier. Returning false rejects
+	 * connections where the hostname doesn't match the certificate, which is the
+	 * secure default behavior. The method is only called when the default SSL
+	 * hostname verification has already failed.
 	 * @see HttpsURLConnection#setHostnameVerifier(HostnameVerifier)
 	 */
 	public static class HttpsHostnameVerifier implements HostnameVerifier {
