@@ -43,7 +43,7 @@ public class SourceMapEntryDB implements SourceMapEntry {
 	 * @param addrMap address map
 	 */
 	SourceMapEntryDB(SourceFileManagerDB manager, DBRecord record, AddressMapDB addrMap) {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			long fileAndLine = record.getLongValue(SourceMapAdapter.FILE_LINE_COL);
 			lineNumber = (int) (fileAndLine & 0xffffffff);
@@ -64,7 +64,7 @@ public class SourceMapEntryDB implements SourceMapEntry {
 			}
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 

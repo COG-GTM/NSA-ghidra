@@ -153,7 +153,7 @@ public class TreeManager implements ManagerDB {
 	 * given name
 	 */
 	public ProgramModule getRootModule(String treeName) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			ModuleManager m = treeMap.get(treeName);
 			if (m != null) {
@@ -164,7 +164,7 @@ public class TreeManager implements ManagerDB {
 			errHandler.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 
@@ -283,7 +283,7 @@ public class TreeManager implements ManagerDB {
 	 * @return null if there is no module with the given name in the tree
 	 */
 	public ProgramModule getModule(String treeName, String name) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			ModuleManager m = treeMap.get(treeName);
 			if (m != null) {
@@ -295,7 +295,7 @@ public class TreeManager implements ManagerDB {
 
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 
 		return null;
@@ -309,7 +309,7 @@ public class TreeManager implements ManagerDB {
 	 * @return null if there is no fragment with the given name in the tree
 	 */
 	public ProgramFragment getFragment(String treeName, String name) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			ModuleManager m = treeMap.get(treeName);
 			if (m != null) {
@@ -321,7 +321,7 @@ public class TreeManager implements ManagerDB {
 
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -335,7 +335,7 @@ public class TreeManager implements ManagerDB {
 	 * exist in memory
 	 */
 	public ProgramFragment getFragment(String treeName, Address addr) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			ModuleManager m = treeMap.get(treeName);
 			if (m != null) {
@@ -348,7 +348,7 @@ public class TreeManager implements ManagerDB {
 
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}

@@ -83,7 +83,7 @@ public class FunctionTagManagerDB implements FunctionTagManager, ErrorHandler {
 
 	@Override
 	public FunctionTag getFunctionTag(String name) {
-		lock.acquire();
+		lock.acquireRead();
 
 		try {
 			DBRecord rec = functionTagAdapter.getRecord(name);
@@ -95,7 +95,7 @@ public class FunctionTagManagerDB implements FunctionTagManager, ErrorHandler {
 			dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 
 		return null;
@@ -104,7 +104,7 @@ public class FunctionTagManagerDB implements FunctionTagManager, ErrorHandler {
 	@Override
 	public FunctionTag getFunctionTag(long id) {
 
-		lock.acquire();
+		lock.acquireRead();
 
 		try {
 			FunctionTag tag = cache.get(id);
@@ -121,7 +121,7 @@ public class FunctionTagManagerDB implements FunctionTagManager, ErrorHandler {
 			dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 
 		return null;
@@ -130,7 +130,7 @@ public class FunctionTagManagerDB implements FunctionTagManager, ErrorHandler {
 	@Override
 	public boolean isTagAssigned(String name) {
 
-		lock.acquire();
+		lock.acquireRead();
 
 		try {
 			FunctionTag tag = getFunctionTag(name);
@@ -143,7 +143,7 @@ public class FunctionTagManagerDB implements FunctionTagManager, ErrorHandler {
 			dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 
 		return false;
@@ -398,7 +398,7 @@ public class FunctionTagManagerDB implements FunctionTagManager, ErrorHandler {
 
 	@Override
 	public int getUseCount(FunctionTag tag) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (tagCountCache == null) {
 				buildTagCountCache();
@@ -411,7 +411,7 @@ public class FunctionTagManagerDB implements FunctionTagManager, ErrorHandler {
 			return 0;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

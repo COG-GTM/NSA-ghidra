@@ -2296,7 +2296,7 @@ public class ProgramDB extends DomainObjectAdapterDB implements Program, ChangeM
 
 	@Override
 	public AddressSetPropertyMap getAddressSetPropertyMap(String mapName) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			AddressSetPropertyMapDB map = addrSetPropertyMap.get(mapName);
 			if (map != null) {
@@ -2310,7 +2310,7 @@ public class ProgramDB extends DomainObjectAdapterDB implements Program, ChangeM
 			return map;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -2348,7 +2348,7 @@ public class ProgramDB extends DomainObjectAdapterDB implements Program, ChangeM
 
 	@Override
 	public IntRangeMap getIntRangeMap(String mapName) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			IntRangeMapDB rangeMap = intRangePropertyMap.get(mapName);
 			if (rangeMap != null) {
@@ -2362,7 +2362,7 @@ public class ProgramDB extends DomainObjectAdapterDB implements Program, ChangeM
 			return rangeMap;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

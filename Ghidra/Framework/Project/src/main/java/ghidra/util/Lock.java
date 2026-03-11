@@ -15,85 +15,140 @@
  */
 package ghidra.util;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 /**
  * Ghidra synchronization lock. This class allows creation of named locks for
  * synchronizing modification of multiple tables in the Ghidra database.
+ * <p>
+ * This implementation uses a {@link ReentrantReadWriteLock} internally to support
+ * concurrent read access while maintaining exclusive write access. The existing
+ * {@link #acquire()}/{@link #release()} methods act as write lock operations for
+ * backward compatibility. New {@link #acquireRead()}/{@link #releaseRead()} methods
+ * allow multiple threads to hold read locks concurrently.
+ * <p>
+ * <b>Important:</b> {@link ReentrantReadWriteLock} does NOT support upgrading from a
+ * read lock to a write lock. Any code path that holds a read lock and needs to write
+ * must first release the read lock, then acquire the write lock. Attempting to acquire
+ * a write lock while holding a read lock will cause a deadlock.
+ * <p>
+ * A thread that holds the write lock can also acquire read locks (lock downgrading is
+ * supported). A thread that holds the write lock can re-acquire the write lock
+ * (reentrant behavior is preserved).
  */
 public class Lock {
-	private Thread owner;
-	private int lockAquireCount = 0;
-	private int waiterCount = 0;
-	private String name;
+	private final ReentrantReadWriteLock rwLock;
+	private final String name;
+
+	/**
+	 * Creates an instance of a lock for synchronization within Ghidra.
+	 * Uses fair ordering by default to prevent starvation under high contention.
+	 * 
+	 * @param name the name of this lock
+	 */
+	public Lock(String name) {
+		this(name, true);
+	}
 
 	/**
 	 * Creates an instance of a lock for synchronization within Ghidra.
 	 * 
 	 * @param name the name of this lock
+	 * @param fairness if true, the lock uses a fair ordering policy where threads
+	 *        acquire locks in the order they requested them, preventing starvation
+	 *        under high contention. If false, no ordering guarantees are made
+	 *        (may improve throughput at the cost of potential starvation).
 	 */
-	public Lock(String name) {
+	public Lock(String name, boolean fairness) {
 		this.name = name;
+		this.rwLock = new ReentrantReadWriteLock(fairness);
 	}
 
 	/**
-	 * Acquire this synchronization lock. (i.e. begin synchronizing on this named
-	 * lock.)
+	 * Acquire the write lock for exclusive access. (i.e. begin synchronizing on this
+	 * named lock for a mutating operation.)
+	 * <p>
+	 * This method blocks until the write lock is available. The write lock is reentrant:
+	 * a thread that already holds the write lock can re-acquire it. A thread that holds
+	 * a read lock must release it before acquiring the write lock to avoid deadlock.
+	 * <p>
+	 * This is the equivalent of the original {@code acquire()} behavior and should be
+	 * used for all write/mutating operations.
 	 */
-	public synchronized void acquire() {
-		Thread currThread = Thread.currentThread();
-
-		while (true) {
-			if (owner == null) {
-				lockAquireCount = 1;
-				owner = currThread;
-				return;
-			}
-			else if (owner == currThread) {
-				lockAquireCount++;
-				return;
-			}
-			try {
-				waiterCount++;
-				wait();
-			}
-			catch (InterruptedException e) {
-				// exception from another threads notify(), ignore
-				// and try to get lock again
-			}
-			finally {
-				waiterCount--;
-			}
-		}
+	public void acquire() {
+		rwLock.writeLock().lock();
 	}
 
 	/**
-	 * Releases this lock, since you are through with the code that needed
-	 * synchronization.
+	 * Releases the write lock, since you are through with the code that needed
+	 * exclusive synchronization.
+	 * 
+	 * @throws IllegalStateException if the current thread does not hold the write lock
 	 */
-	public synchronized void release() {
-		Thread currThread = Thread.currentThread();
-
-		if (lockAquireCount > 0 && (owner == currThread)) {
-			if (--lockAquireCount == 0) {
-				owner = null;
-				// This is purely to help sample profiling.  If notify() is called the
-				// sampler can attribute time to the methods calling this erroneously.  For some reason
-				// the visualvm sampler gets a sample more often when notify() is called.
-				if (waiterCount != 0) {
-					notify();
-				}
-			}
-		}
-		else {
+	public void release() {
+		if (!rwLock.isWriteLockedByCurrentThread()) {
 			throw new IllegalStateException("Attempted to release an unowned lock: " + name);
 		}
+		rwLock.writeLock().unlock();
 	}
 
 	/**
-	 * Gets the thread that currently owns the lock.
+	 * Acquire a read lock for shared (non-exclusive) access. Multiple threads can hold
+	 * read locks concurrently, allowing parallel read-only operations.
+	 * <p>
+	 * This method blocks if a thread currently holds or is waiting for the write lock
+	 * (under fair ordering). A thread that holds the write lock can also acquire the
+	 * read lock (lock downgrading).
+	 * <p>
+	 * <b>Important:</b> Do NOT attempt to acquire a write lock while holding a read lock.
+	 * {@link ReentrantReadWriteLock} does not support lock upgrading and this will cause
+	 * a deadlock. Release the read lock first, then acquire the write lock.
+	 */
+	public void acquireRead() {
+		rwLock.readLock().lock();
+	}
+
+	/**
+	 * Releases a read lock previously acquired via {@link #acquireRead()}.
+	 */
+	public void releaseRead() {
+		rwLock.readLock().unlock();
+	}
+
+	/**
+	 * Gets the thread that currently owns the write lock.
 	 * 
-	 * @return the thread that owns the lock or null.
+	 * @return the thread that owns the write lock or null if no thread holds it.
 	 */
 	public Thread getOwner() {
-		return owner;
+		return rwLock.isWriteLockedByCurrentThread() ? Thread.currentThread() : null;
+	}
+
+	/**
+	 * Checks whether the write lock is currently held by any thread.
+	 * 
+	 * @return true if the write lock is held by any thread.
+	 */
+	public boolean isLocked() {
+		return rwLock.isWriteLocked();
+	}
+
+	/**
+	 * Returns the number of read locks currently held.
+	 * 
+	 * @return the number of read locks held
+	 */
+	public int getReadLockCount() {
+		return rwLock.getReadLockCount();
+	}
+
+	/**
+	 * Returns the number of reentrant write holds on this lock by the current thread.
+	 * 
+	 * @return the number of holds on the write lock by the current thread, or zero if
+	 *         the write lock is not held by the current thread
+	 */
+	public int getWriteHoldCount() {
+		return rwLock.getWriteHoldCount();
 	}
 }

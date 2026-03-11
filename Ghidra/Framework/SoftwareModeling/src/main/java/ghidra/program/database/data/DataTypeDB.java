@@ -154,7 +154,7 @@ abstract class DataTypeDB extends DatabaseObject implements DataType {
 		if (n != null && !isInvalid()) {
 			return n;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (name == null) {
@@ -163,7 +163,7 @@ abstract class DataTypeDB extends DatabaseObject implements DataType {
 			return name;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -192,7 +192,7 @@ abstract class DataTypeDB extends DatabaseObject implements DataType {
 		if (localDefaultSettings != null && !isInvalid()) {
 			return localDefaultSettings;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (checkIsValid()) {
 				defaultSettings = doGetDefaultSettings();
@@ -203,7 +203,7 @@ abstract class DataTypeDB extends DatabaseObject implements DataType {
 			return defaultSettings;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -294,7 +294,7 @@ abstract class DataTypeDB extends DatabaseObject implements DataType {
 		if (cat != null && !isInvalid()) {
 			return cat.getCategoryPath();
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (category == null) {
@@ -306,7 +306,7 @@ abstract class DataTypeDB extends DatabaseObject implements DataType {
 			return category.getCategoryPath();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

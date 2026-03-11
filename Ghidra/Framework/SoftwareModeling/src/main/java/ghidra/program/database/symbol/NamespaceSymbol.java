@@ -55,7 +55,7 @@ public class NamespaceSymbol extends SymbolDB {
 
 	@Override
 	public Namespace getObject() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (!checkIsValid()) {
 				return null;
@@ -66,7 +66,7 @@ public class NamespaceSymbol extends SymbolDB {
 			return namespace;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

@@ -107,7 +107,7 @@ class FunctionDefinitionDB extends DataTypeDB implements FunctionDefinition {
 
 	@Override
 	public String getPrototypeString(boolean includeCallingConvention) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			StringBuffer buf = new StringBuffer();
@@ -149,25 +149,25 @@ class FunctionDefinitionDB extends DataTypeDB implements FunctionDefinition {
 			return buf.toString();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public ParameterDefinitionDB[] getArguments() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			ParameterDefinitionDB[] vars = new ParameterDefinitionDB[parameters.size()];
 			return parameters.toArray(vars);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public DataType getReturnType() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			long dtId = record.getLongValue(FunctionDefinitionDBAdapter.FUNCTION_DEF_RETURN_ID_COL);
@@ -178,7 +178,7 @@ class FunctionDefinitionDB extends DataTypeDB implements FunctionDefinition {
 			return dt;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -260,13 +260,13 @@ class FunctionDefinitionDB extends DataTypeDB implements FunctionDefinition {
 
 	@Override
 	public String getComment() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return record.getString(FunctionDefinitionDBAdapter.FUNCTION_DEF_COMMENT_COL);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -617,7 +617,7 @@ class FunctionDefinitionDB extends DataTypeDB implements FunctionDefinition {
 
 	@Override
 	public boolean hasVarArgs() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (record == null) {
@@ -627,13 +627,13 @@ class FunctionDefinitionDB extends DataTypeDB implements FunctionDefinition {
 			return ((flags & FunctionDefinitionDBAdapter.FUNCTION_DEF_VARARG_FLAG) != 0);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public boolean hasNoReturn() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (record == null) {
@@ -643,7 +643,7 @@ class FunctionDefinitionDB extends DataTypeDB implements FunctionDefinition {
 			return ((flags & FunctionDefinitionDBAdapter.FUNCTION_DEF_NORETURN_FLAG) != 0);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -775,7 +775,7 @@ class FunctionDefinitionDB extends DataTypeDB implements FunctionDefinition {
 
 	@Override
 	public String getCallingConventionName() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (record == null) {
@@ -788,7 +788,7 @@ class FunctionDefinitionDB extends DataTypeDB implements FunctionDefinition {
 			return dataMgr.getCallingConventionName(id);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

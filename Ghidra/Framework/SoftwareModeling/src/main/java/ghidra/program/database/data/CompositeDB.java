@@ -230,14 +230,14 @@ abstract class CompositeDB extends DataTypeDB implements CompositeInternal {
 
 	@Override
 	public String getDescription() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			String s = record.getString(CompositeDBAdapter.COMPOSITE_COMMENT_COL);
 			return s == null ? "" : s;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -303,13 +303,13 @@ abstract class CompositeDB extends DataTypeDB implements CompositeInternal {
 
 	@Override
 	public boolean isPartOf(DataType dataTypeOfInterest) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return DataTypeUtilities.isSecondPartOfFirst(this, dataTypeOfInterest);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -440,7 +440,7 @@ abstract class CompositeDB extends DataTypeDB implements CompositeInternal {
 
 	@Override
 	void setUniversalID(UniversalID id) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkDeleted();
 			record.setLongValue(CompositeDBAdapter.COMPOSITE_UNIVERSAL_DT_ID, id.getValue());
@@ -451,7 +451,7 @@ abstract class CompositeDB extends DataTypeDB implements CompositeInternal {
 			dataMgr.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 
 	}
@@ -505,12 +505,12 @@ abstract class CompositeDB extends DataTypeDB implements CompositeInternal {
 
 	@Override
 	public final int getAlignment() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return getComputedAlignment(checkIsValid() && dataMgr.isTransactionActive());
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -547,13 +547,13 @@ abstract class CompositeDB extends DataTypeDB implements CompositeInternal {
 
 	@Override
 	public int getStoredPackingValue() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return record.getIntValue(CompositeDBAdapter.COMPOSITE_PACKING_COL);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -646,13 +646,13 @@ abstract class CompositeDB extends DataTypeDB implements CompositeInternal {
 
 	@Override
 	public int getStoredMinimumAlignment() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return record.getIntValue(CompositeDBAdapter.COMPOSITE_MIN_ALIGN_COL);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

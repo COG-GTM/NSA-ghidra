@@ -183,7 +183,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 
 	@Override
 	public Address[] getFunctionThunkAddresses(boolean recursive) {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			List<Address> thunkAddrList = getFunctionThunkAddresses(key, recursive);
@@ -193,7 +193,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 			return thunkAddrList.toArray(new Address[thunkAddrList.size()]);
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
@@ -232,13 +232,13 @@ public class FunctionDB extends DatabaseObject implements Function {
 
 	@Override
 	public String getName() {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			return functionSymbol.getName();
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
@@ -264,13 +264,13 @@ public class FunctionDB extends DatabaseObject implements Function {
 
 	@Override
 	public String getComment() {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			return manager.getCodeManager().getComment(CommentType.PLATE, getEntryPoint());
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
@@ -295,13 +295,13 @@ public class FunctionDB extends DatabaseObject implements Function {
 
 	@Override
 	public String getRepeatableComment() {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			return manager.getCodeManager().getComment(CommentType.REPEATABLE, getEntryPoint());
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
@@ -330,7 +330,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 
 	@Override
 	public AddressSetView getBody() {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			if (!checkIsValid()) {
 				// Function or its symbol has been deleted
@@ -339,7 +339,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 			return program.getNamespaceManager().getAddressSet(this);
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
@@ -373,14 +373,14 @@ public class FunctionDB extends DatabaseObject implements Function {
 		if (rp != null) {
 			return rp;
 		}
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			// NOTE: lock required to avoid returning null returnParam
 			loadVariables();
 			return returnParam;
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
@@ -499,7 +499,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 
 	@Override
 	public FunctionSignature getSignature(boolean formalSignature) {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			startUpdate();
 			checkIsValid();
@@ -511,7 +511,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 		}
 		finally {
 			endUpdate();
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
@@ -522,7 +522,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 
 	@Override
 	public String getPrototypeString(boolean formalSignature, boolean includeCallingConvention) {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			if (!checkIsValid()) {
 				return "undefined " + getName() + "()";
@@ -576,7 +576,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 			return buf.toString();
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
@@ -1079,7 +1079,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 
 	@Override
 	public Variable[] getVariables(VariableFilter filter) {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			if (thunkedFunction != null) {
@@ -1110,7 +1110,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 			return list.toArray(vars);
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
@@ -1121,7 +1121,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 
 	@Override
 	public Parameter[] getParameters(VariableFilter filter) {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			if (thunkedFunction != null) {
@@ -1146,7 +1146,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 			return list.toArray(vars);
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
@@ -1157,7 +1157,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 
 	@Override
 	public Variable[] getLocalVariables(VariableFilter filter) {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			if (thunkedFunction != null) {
@@ -1174,7 +1174,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 			return list.toArray(vars);
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
@@ -1185,7 +1185,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 
 	@Override
 	public int getParameterCount() {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			if (thunkedFunction != null) {
@@ -1199,13 +1199,13 @@ public class FunctionDB extends DatabaseObject implements Function {
 			return count;
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
 	@Override
 	public int getAutoParameterCount() {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			if (thunkedFunction != null) {
@@ -1218,7 +1218,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 			return 0;
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
@@ -1849,20 +1849,20 @@ public class FunctionDB extends DatabaseObject implements Function {
 	 * @return Variable which corresponds to specified symbol
 	 */
 	public Variable getVariable(VariableSymbolDB symbol) {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			loadVariables();
 			return symbolMap.get(symbol);
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
 	@Override
 	public Parameter getParameter(int ordinal) {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			if (thunkedFunction != null) {
@@ -1888,7 +1888,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 			return null;
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
@@ -2429,7 +2429,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 
 	@Override
 	public SourceType getSignatureSource() {
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			if (thunkedFunction != null) {
@@ -2439,7 +2439,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 			return getStoredSignatureSource();
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 	}
 
@@ -2718,7 +2718,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 		// cache will have the current tag state unless tags have been deleted or edited; in
 		// those cases the validity check will fail and we'll be forced to go back to
 		// the db.
-		manager.lock.acquire();
+		manager.lock.acquireRead();
 
 		try {
 
@@ -2735,7 +2735,7 @@ public class FunctionDB extends DatabaseObject implements Function {
 			manager.dbError(e);
 		}
 		finally {
-			manager.lock.release();
+			manager.lock.releaseRead();
 		}
 		return tags;
 

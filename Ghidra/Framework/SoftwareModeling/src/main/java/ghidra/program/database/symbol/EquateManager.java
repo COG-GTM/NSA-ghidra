@@ -136,7 +136,7 @@ public class EquateManager implements EquateTable, ErrorHandler, ManagerDB {
 
 	@Override
 	public Equate getEquate(Address reference, int opIndex, long scalarValue) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			long refAddr = addrMap.getKey(reference, false);
 			if (refAddr == AddressMap.INVALID_ADDRESS_KEY) {
@@ -157,7 +157,7 @@ public class EquateManager implements EquateTable, ErrorHandler, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -165,7 +165,7 @@ public class EquateManager implements EquateTable, ErrorHandler, ManagerDB {
 	@Override
 	public List<Equate> getEquates(Address reference, int opIndex) {
 		List<Equate> ret = new LinkedList<>();
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			long refAddr = addrMap.getKey(reference, false);
 			if (refAddr == AddressMap.INVALID_ADDRESS_KEY) {
@@ -183,7 +183,7 @@ public class EquateManager implements EquateTable, ErrorHandler, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return ret;
 	}
@@ -191,7 +191,7 @@ public class EquateManager implements EquateTable, ErrorHandler, ManagerDB {
 	@Override
 	public List<Equate> getEquates(Address reference) {
 		List<Equate> ret = new LinkedList<>();
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			long refAddr = addrMap.getKey(reference, false);
 			if (refAddr == AddressMap.INVALID_ADDRESS_KEY) {
@@ -207,14 +207,14 @@ public class EquateManager implements EquateTable, ErrorHandler, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return ret;
 	}
 
 	@Override
 	public Equate getEquate(String name) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			long equateID = equateAdapter.getRecordKey(name);
 			return getEquateDB(equateID);
@@ -226,7 +226,7 @@ public class EquateManager implements EquateTable, ErrorHandler, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -549,7 +549,7 @@ public class EquateManager implements EquateTable, ErrorHandler, ManagerDB {
 	}
 
 	private EquateDB getEquateDB(long equateID) throws IOException {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			EquateDB equateDB = equateCache.get(equateID);
 			if (equateDB == null) {
@@ -561,12 +561,12 @@ public class EquateManager implements EquateTable, ErrorHandler, ManagerDB {
 			return equateDB;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	private EquateRefDB getEquateRefDB(long key) throws IOException {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			EquateRefDB ref = refCache.get(key);
 			if (ref == null) {
@@ -576,7 +576,7 @@ public class EquateManager implements EquateTable, ErrorHandler, ManagerDB {
 			return ref;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

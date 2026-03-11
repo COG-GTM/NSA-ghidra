@@ -757,7 +757,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 		if (symbolID == Namespace.GLOBAL_NAMESPACE_ID) {
 			return program.getGlobalNamespace().getSymbol();
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			SymbolDB s = cache.get(symbolID);
 			if (s != null) {
@@ -786,12 +786,12 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	private SymbolDB getDynamicSymbol(Address addr) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			long symbolID = getDynamicSymbolID(addr);
 			SymbolDB s = cache.get(symbolID);
@@ -802,7 +802,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			return s;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -824,7 +824,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 
 	@Override
 	public SymbolIterator getSymbolsAsIterator(Address addr) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			RecordIterator iterator = adapter.getSymbols(addr, addr, true);
 			return new SymbolRecordIterator(iterator, true, true);
@@ -833,14 +833,14 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return new SymbolRecordIterator(new EmptyRecordIterator(), true, true);
 	}
 
 	@Override
 	public Symbol[] getSymbols(Address addr) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			Field[] symbolIDs = adapter.getSymbolIDs(addr);
 			if (symbolIDs.length == 0) {
@@ -872,7 +872,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 
 		return NO_SYMBOLS;
@@ -880,7 +880,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 
 	@Override
 	public Symbol[] getUserSymbols(Address addr) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			Field[] symbolIDs = adapter.getSymbolIDs(addr);
 			if (symbolIDs.length == 0) {
@@ -897,7 +897,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return NO_SYMBOLS;
 	}
@@ -915,7 +915,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 
 		long namespaceId = namespace.getID();
 
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			DBRecord record = adapter.getSymbolRecord(address, name, namespaceId);
 			if (record != null) {
@@ -926,7 +926,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 
 		// check for default external symbol
@@ -975,7 +975,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 
 	@Override
 	public LibrarySymbol getLibrarySymbol(String name) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			for (Symbol s : getSymbols(name)) {
 				if (s.getSymbolType() == SymbolType.LIBRARY) {
@@ -984,7 +984,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			}
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -1126,7 +1126,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 		if (library != null) {
 			checkValidNamespaceArgument(library);
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			long matchLibraryId = library != null ? library.getID() : -1;
 			RecordIterator recordIter = adapter.getExternalSymbolsByOriginalImportName(extLabel);
@@ -1148,7 +1148,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			return null; // will not occur
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -1166,7 +1166,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 		if (library != null) {
 			checkValidNamespaceArgument(library);
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			long matchLibraryId = library != null ? library.getID() : -1;
 			RecordIterator recordIter = adapter.getExternalSymbolsByMemoryAddress(extProgAddr);
@@ -1188,7 +1188,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			return null; // will not occur
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -1227,7 +1227,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 
 	@Override
 	public SymbolIterator getSymbols(String name) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			SymbolIterator symIter = new SymbolNameRecordIterator(name);
 			if (!symIter.hasNext()) {
@@ -1240,14 +1240,14 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
 
 	@Override
 	public SymbolIterator scanSymbolsByName(String startName) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return new SymbolNameScanningIterator(startName);
 		}
@@ -1255,7 +1255,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -1270,7 +1270,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			return symbols.length > 0 ? symbols[0] : null;
 		}
 
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			DBRecord record = adapter.getPrimarySymbol(addr);
 			if (record != null) {
@@ -1284,7 +1284,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -1885,7 +1885,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 				return true;
 			}
 
-			lock.acquire();
+			lock.acquireRead();
 			try {
 				while (nextSymbol == null && (forward ? it.hasNext() : it.hasPrevious())) {
 					DBRecord rec = forward ? it.next() : it.previous();
@@ -1900,7 +1900,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 				program.dbError(e);
 			}
 			finally {
-				lock.release();
+				lock.releaseRead();
 			}
 			return false;
 		}
@@ -1946,7 +1946,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 				return true;
 			}
 
-			lock.acquire();
+			lock.acquireRead();
 			try {
 				while (nextSymbol == null && (forward ? it.hasNext() : it.hasPrevious())) {
 					DBRecord rec = forward ? it.next() : it.previous();
@@ -1960,7 +1960,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 				program.dbError(e);
 			}
 			finally {
-				lock.release();
+				lock.releaseRead();
 			}
 			return false;
 		}
@@ -2279,7 +2279,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 
 	@Override
 	public Symbol getExternalSymbol(String name) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			SymbolIterator it = getExternalSymbols(name);
 			if (it.hasNext()) {
@@ -2288,13 +2288,13 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public SymbolIterator getExternalSymbols(String name) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			SymbolIterator symIter = new ExternalSymbolNameRecordIterator(name);
 			return symIter;
@@ -2303,7 +2303,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -2892,7 +2892,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 	public Namespace getOrCreateNameSpace(Namespace parent, String name, SourceType source)
 			throws DuplicateNameException, InvalidInputException {
 
-		lock.acquire();
+		lock.acquireRead();
 		try {
 
 			checkValidNamespaceArgument(parent);
@@ -2914,7 +2914,7 @@ public class SymbolManager implements SymbolTable, ManagerDB {
 			return new NamespaceDB(s, namespaceMgr);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

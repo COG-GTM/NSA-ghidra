@@ -858,7 +858,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 		if (addr == AddressMap.INVALID_ADDRESS_KEY) {
 			return null;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			CodeUnitDB cu = cache.get(addr);
 			if (cu != null) {
@@ -884,7 +884,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -897,7 +897,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 	 * exist
 	 */
 	public CodeUnit getCodeUnitAfter(Address addr) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			CodeUnit cu = getCodeUnitContaining(addr);
 			if (cu != null) {
@@ -914,7 +914,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 			}
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -978,7 +978,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 	 * exist
 	 */
 	public CodeUnit getCodeUnitBefore(Address address) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			AddressIterator it = program.getMemory().getAddresses(address, false);
 			Address addr = null;
@@ -1001,7 +1001,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 			dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 
 		return null;
@@ -1019,7 +1019,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 	 * not exist.
 	 */
 	public CodeUnit getCodeUnitContaining(Address address) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			CodeUnit cu = getCodeUnitAt(address);
 			if (cu != null) {
@@ -1083,7 +1083,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -1319,7 +1319,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 		if (addr == AddressMap.INVALID_ADDRESS_KEY) {
 			return null;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			CodeUnitDB cu = cache.get(addr);
 			if (cu == null) {
@@ -1333,7 +1333,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -1353,7 +1353,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 		if (addr == AddressMap.INVALID_ADDRESS_KEY) {
 			return null;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			CodeUnit cu = cache.get(addr);
 			if (cu == null) {
@@ -1370,7 +1370,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -1384,7 +1384,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 	 * does not exist
 	 */
 	public Instruction getInstructionBefore(Address addr) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			DBRecord rec = instAdapter.getRecordBefore(addr);
 			return getInstructionDB(rec);
@@ -1393,7 +1393,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -1406,7 +1406,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 	 * does not exist
 	 */
 	public Instruction getInstructionAfter(Address addr) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			DBRecord rec = instAdapter.getRecordAfter(addr);
 			return getInstructionDB(rec);
@@ -1415,7 +1415,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -1444,7 +1444,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 	 * instruction does not exist
 	 */
 	public Instruction getInstructionContaining(Address address, boolean usePrototypeLength) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			Instruction instr = getInstructionAt(address);
 			if (instr != null) {
@@ -1467,7 +1467,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -1485,7 +1485,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 		if (addr == AddressMap.INVALID_ADDRESS_KEY) {
 			return getUndefinedDataDB(address, addr);
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			DataDB data = getDataDB(addr);
 			if (data != null) {
@@ -1497,7 +1497,7 @@ public class CodeManager implements ErrorHandler, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}

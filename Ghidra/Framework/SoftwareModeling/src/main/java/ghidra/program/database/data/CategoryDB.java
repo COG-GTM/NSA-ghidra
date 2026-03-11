@@ -89,7 +89,7 @@ class CategoryDB extends DatabaseObject implements Category {
 		if (localCategoryPath != null && !isInvalid()) {
 			return localCategoryPath;
 		}
-		mgr.lock.acquire();
+		mgr.lock.acquireRead();
 		try {
 			if (!checkIsValid() || isRoot()) {
 				categoryPath = CategoryPath.ROOT;
@@ -100,7 +100,7 @@ class CategoryDB extends DatabaseObject implements Category {
 			return categoryPath;
 		}
 		finally {
-			mgr.lock.release();
+			mgr.lock.releaseRead();
 		}
 	}
 

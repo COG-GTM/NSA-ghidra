@@ -662,7 +662,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 	}
 
 	boolean clearSetting(long dataTypeId, String name) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			settingsCache.remove(dataTypeId, name);
 			return settingsAdapter.removeSettingsRecord(dataTypeId, name);
@@ -671,7 +671,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 			errHandler.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return false;
 	}
@@ -1074,23 +1074,23 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 
 	@Override
 	public List<DataType> getFavorites() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return new ArrayList<>(favoritesList);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public boolean isFavorite(DataType dataType) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return favoritesList.contains(dataType);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -1218,7 +1218,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 	 */
 	@Override
 	public Category getCategory(long id) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return getCategoryDB(id);
 		}
@@ -1227,7 +1227,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -2118,7 +2118,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 		}
 
 		// ignore .conflict in both name and result matches
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			buildSortedDataTypeList();
 			// Use exemplar datatype in root category without .conflict to position at start
@@ -2145,7 +2145,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 			}
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -2163,7 +2163,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 		monitor = TaskMonitor.dummyIfNull(monitor);
 
 		Pattern regexp = UserSearchUtils.createSearchPattern(name, caseSensitive);
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			buildSortedDataTypeList();
 			for (DataType dt : sortedDataTypes) {
@@ -2177,7 +2177,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 			}
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -2783,7 +2783,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 	}
 
 	List<DataType> getDataTypesInCategory(long categoryID) {
-		lock.acquire();
+		lock.acquireRead();
 		ArrayList<DataType> list = new ArrayList<>();
 		try {
 			Field[] ids = builtinAdapter.getRecordIdsInCategory(categoryID);
@@ -2812,7 +2812,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 			errHandler.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return list;
 	}
@@ -2824,7 +2824,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 
 	@Override
 	public int getDataTypeCount(boolean includePointersAndArrays) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			buildSortedDataTypeList();
 			int count = sortedDataTypes.size();
@@ -2839,7 +2839,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 			return count;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -2892,7 +2892,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 	}
 
 	private DataType getBuiltInDataType(long dataTypeID, DBRecord record) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			DataType dt = builtInMap.get(dataTypeID);
 			if (dt != null) {
@@ -2970,7 +2970,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 			errHandler.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -2988,7 +2988,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 	}
 
 	private Enum getEnumDataType(long dataTypeID, DBRecord record) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			EnumDB enu = (EnumDB) dtCache.get(dataTypeID);
 			if (enu == null) {
@@ -3005,13 +3005,13 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 			errHandler.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
 
 	private Composite getCompositeDataType(long dataTypeID, DBRecord record) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			CompositeDB comp = (CompositeDB) dtCache.get(dataTypeID);
 			if (comp == null) {
@@ -3035,13 +3035,13 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 			errHandler.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
 
 	private TypeDef getTypedefDataType(long dataTypeID, DBRecord record) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			TypedefDB typeDB = (TypedefDB) dtCache.get(dataTypeID);
 			if (typeDB == null) {
@@ -3058,13 +3058,13 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 			errHandler.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
 
 	private Array getArrayDataType(long dataTypeID, DBRecord record) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			ArrayDB arrayDB = (ArrayDB) dtCache.get(dataTypeID);
 			if (arrayDB == null) {
@@ -3082,13 +3082,13 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
 
 	private Pointer getPointerDataType(long dataTypeID, DBRecord record) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			PointerDB ptrDB = (PointerDB) dtCache.get(dataTypeID);
 			if (ptrDB == null) {
@@ -3106,13 +3106,13 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
 
 	private FunctionDefinition getFunctionDefDataType(long dataTypeID, DBRecord record) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			FunctionDefinitionDB funDef = (FunctionDefinitionDB) dtCache.get(dataTypeID);
 			if (funDef == null) {
@@ -3131,7 +3131,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -3661,25 +3661,25 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 
 	@Override
 	public Iterator<DataType> getAllDataTypes() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			buildSortedDataTypeList();
 			return new ArrayList<>(sortedDataTypes).iterator();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public void getAllDataTypes(List<DataType> list) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			buildSortedDataTypeList();
 			list.addAll(sortedDataTypes);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -3853,7 +3853,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 	}
 
 	List<DataType> getParentDataTypes(long dataTypeId) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			Set<Long> parentIds = parentChildAdapter.getParentIds(dataTypeId);
 			// NOTE: Use of Set for containing datatypes is avoided due to the excessive
@@ -3875,7 +3875,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 			dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -4106,12 +4106,12 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 	@Override
 	public DataType getDataType(SourceArchive sourceArchive, UniversalID datatypeID) {
 		UniversalID sourceID = sourceArchive == null ? null : sourceArchive.getSourceArchiveID();
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return idsToDataTypeMap.getDataType(sourceID, datatypeID);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -4134,7 +4134,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 	}
 
 	private DataType findDataTypeForIDs(UniversalID sourceID, UniversalID datatypeID) {
-		lock.acquire();
+		lock.acquireRead();
 		DBRecord record = null;
 		try {
 			record = typedefAdapter.getRecordWithIDs(sourceID, datatypeID);
@@ -4152,7 +4152,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 			errHandler.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		if (record != null) {
 			return getDataType(record.getKey(), record);
@@ -4197,7 +4197,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 		else if (id == UNKNOWN_CALLING_CONVENTION_ID) {
 			return CompilerSpec.CALLING_CONVENTION_unknown;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			String callingConvention = callingConventionAdapter.getCallingConventionName(id);
 			return callingConvention != null ? callingConvention
@@ -4207,7 +4207,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 			dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -4237,7 +4237,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 			return DEFAULT_CALLING_CONVENTION_ID;
 		}
 
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			// If restrictive only permit a name which is known
 			if (restrictive &&
@@ -4255,7 +4255,7 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 			dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return UNKNOWN_CALLING_CONVENTION_ID;
 	}
@@ -4299,12 +4299,12 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 
 	@Override
 	public Collection<String> getDefinedCallingConventionNames() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return new ArrayList<>(getDefinedCallingConventionSet());
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -4335,12 +4335,12 @@ abstract public class DataTypeManagerDB implements DataTypeManager {
 
 	@Override
 	public Collection<String> getKnownCallingConventionNames() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return new ArrayList<>(getKnownCallingConventionSet());
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

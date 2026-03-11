@@ -196,7 +196,7 @@ public class EquateDB extends DatabaseObject implements Equate {
 	@Override
 	public List<EquateReference> getReferences(Address refAddr) {
 		Lock lock = equateMgr.getLock();
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (checkIsValid()) {
 				return equateMgr.getReferences(key, refAddr);
@@ -206,7 +206,7 @@ public class EquateDB extends DatabaseObject implements Equate {
 			equateMgr.getProgram().dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return new ArrayList<>();
 	}

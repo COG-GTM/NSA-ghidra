@@ -42,7 +42,7 @@ public class IntRangeMapDB implements IntRangeMap {
 	public static IntRangeMapDB getPropertyMap(ProgramDB program, String mapName,
 			ErrorHandler errHandler, AddressMap addrMap, Lock lock) {
 
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			DBHandle dbh = program.getDBHandle();
 			String tableName = IntRangeMapDB.TABLE_PREFIX + mapName;
@@ -51,7 +51,7 @@ public class IntRangeMapDB implements IntRangeMap {
 			}
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -174,7 +174,7 @@ public class IntRangeMapDB implements IntRangeMap {
 	@Override
 	public Integer getValue(Address address) {
 		checkDeleted();
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			Field value = propertyMap.getValue(address);
 			if (value == null) {
@@ -183,31 +183,31 @@ public class IntRangeMapDB implements IntRangeMap {
 			return ((IntField) value).getIntValue();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public AddressSet getAddressSet() {
 		checkDeleted();
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return propertyMap.getAddressSet();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public AddressSet getAddressSet(int value) {
 		checkDeleted();
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return propertyMap.getAddressSet(new IntField(value));
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

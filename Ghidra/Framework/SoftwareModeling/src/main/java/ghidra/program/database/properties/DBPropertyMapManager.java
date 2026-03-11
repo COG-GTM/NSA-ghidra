@@ -536,7 +536,7 @@ public class DBPropertyMapManager implements PropertyMapManager, ManagerDB {
 
 	@Override
 	public Iterator<String> propertyManagers() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			// NOTE: infrequent use expected
 			return propertyMapCache.keySet()
@@ -545,7 +545,7 @@ public class DBPropertyMapManager implements PropertyMapManager, ManagerDB {
 					.iterator();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

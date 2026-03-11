@@ -98,7 +98,7 @@ public class CodeSymbol extends MemorySymbol {
 
 	@Override
 	public Object getObject() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (!checkIsValid()) {
 				return null;
@@ -119,7 +119,7 @@ public class CodeSymbol extends MemorySymbol {
 			}
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}

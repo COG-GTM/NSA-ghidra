@@ -185,7 +185,7 @@ public class AddressRangeMapDB implements DBListener {
 		if (localValue != null && localValue.first.contains(address)) {
 			return localValue.second;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (rangeMapTable == null) {
 				return null;
@@ -204,7 +204,7 @@ public class AddressRangeMapDB implements DBListener {
 			errHandler.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -326,7 +326,7 @@ public class AddressRangeMapDB implements DBListener {
 		if (isEmpty()) {
 			return set;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (rangeMapTable == null) {
 				return set;
@@ -338,7 +338,7 @@ public class AddressRangeMapDB implements DBListener {
 			return set;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -353,7 +353,7 @@ public class AddressRangeMapDB implements DBListener {
 		if (isEmpty()) {
 			return set;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (rangeMapTable == null) {
 				return set;
@@ -370,7 +370,7 @@ public class AddressRangeMapDB implements DBListener {
 			dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return set;
 	}
@@ -520,7 +520,7 @@ public class AddressRangeMapDB implements DBListener {
 		if (localValue != null && localValue.first.contains(address)) {
 			return localValue.first;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			// look for a stored value range that contains that address
 			AddressRange range = findValueRangeContainingAddress(address);
@@ -535,7 +535,7 @@ public class AddressRangeMapDB implements DBListener {
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

@@ -210,7 +210,7 @@ class DataDB extends CodeUnitDB implements Data {
 
 	@Override
 	public Data getComponent(int index) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 
 			checkIsValid();
@@ -256,7 +256,7 @@ class DataDB extends CodeUnitDB implements Data {
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -283,25 +283,25 @@ class DataDB extends CodeUnitDB implements Data {
 
 	@Override
 	public String getDefaultValueRepresentation() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return dataType.getRepresentation(this, this, getLength());
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public String getMnemonicString() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return dataType.getMnemonic(this);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -446,7 +446,7 @@ class DataDB extends CodeUnitDB implements Data {
 
 	@Override
 	public Data getComponent(int[] componentPath) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (componentPath == null || componentPath.length <= level) {
 				return this;
@@ -455,7 +455,7 @@ class DataDB extends CodeUnitDB implements Data {
 			return (component == null ? null : component.getComponent(componentPath));
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -488,7 +488,7 @@ class DataDB extends CodeUnitDB implements Data {
 
 	@Override
 	public Data getComponentContaining(int offset) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (offset < 0 || offset > getLength()) {
@@ -518,14 +518,14 @@ class DataDB extends CodeUnitDB implements Data {
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 
 	}
 
 	@Override
 	public List<Data> getComponentsContaining(int offset) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (offset < 0 || offset >= getLength()) {
@@ -573,7 +573,7 @@ class DataDB extends CodeUnitDB implements Data {
 			return Collections.emptyList();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 
 	}
@@ -610,7 +610,7 @@ class DataDB extends CodeUnitDB implements Data {
 
 	@Override
 	public int getNumComponents() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (getLength() < dataType.getLength()) {
@@ -635,7 +635,7 @@ class DataDB extends CodeUnitDB implements Data {
 			return 0;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -663,7 +663,7 @@ class DataDB extends CodeUnitDB implements Data {
 
 	@Override
 	public Data getPrimitiveAt(int offset) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (offset < 0 || offset >= getLength()) {
@@ -676,7 +676,7 @@ class DataDB extends CodeUnitDB implements Data {
 			return dc.getPrimitiveAt(offset - dc.getParentOffset());
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -692,13 +692,13 @@ class DataDB extends CodeUnitDB implements Data {
 
 	@Override
 	public Object getValue() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return dataType.getValue(this, this, getLength());
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

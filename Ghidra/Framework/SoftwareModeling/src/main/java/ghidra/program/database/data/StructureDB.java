@@ -755,7 +755,7 @@ class StructureDB extends CompositeDB implements StructureInternal {
 
 	@Override
 	public boolean isPartOf(DataType dataType) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (equals(dataType)) {
@@ -775,36 +775,36 @@ class StructureDB extends CompositeDB implements StructureInternal {
 			return false;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public int getNumComponents() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return numComponents;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public int getNumDefinedComponents() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return components.size();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public DataTypeComponentDB getComponent(int ordinal) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (ordinal < 0 || ordinal >= numComponents) {
@@ -834,13 +834,13 @@ class StructureDB extends CompositeDB implements StructureInternal {
 			return new DataTypeComponentDB(dataMgr, this, ordinal, offset);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public DataTypeComponent[] getComponents() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			DataTypeComponent[] comps = new DataTypeComponent[numComponents];
@@ -850,7 +850,7 @@ class StructureDB extends CompositeDB implements StructureInternal {
 			return comps;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -932,7 +932,7 @@ class StructureDB extends CompositeDB implements StructureInternal {
 
 	@Override
 	public int getLength() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (structLength == 0) {
@@ -941,7 +941,7 @@ class StructureDB extends CompositeDB implements StructureInternal {
 			return structLength;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -1129,7 +1129,7 @@ class StructureDB extends CompositeDB implements StructureInternal {
 
 	@Override
 	public DataTypeComponent getDefinedComponentAtOrAfterOffset(int offset) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (offset > structLength || offset < 0) {
@@ -1150,13 +1150,13 @@ class StructureDB extends CompositeDB implements StructureInternal {
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public DataTypeComponent getComponentContaining(int offset) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (offset > structLength || offset < 0) {
@@ -1182,13 +1182,13 @@ class StructureDB extends CompositeDB implements StructureInternal {
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public List<DataTypeComponent> getComponentsContaining(int offset) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			ArrayList<DataTypeComponent> list = new ArrayList<>();
@@ -1223,7 +1223,7 @@ class StructureDB extends CompositeDB implements StructureInternal {
 			return list;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -1253,7 +1253,7 @@ class StructureDB extends CompositeDB implements StructureInternal {
 
 	@Override
 	public DataTypeComponent getDataTypeAt(int offset) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			DataTypeComponent dtc = getComponentContaining(offset);
 			if (dtc != null) {
@@ -1265,19 +1265,19 @@ class StructureDB extends CompositeDB implements StructureInternal {
 			return dtc;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public DataTypeComponentDB[] getDefinedComponents() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return components.toArray(new DataTypeComponentDB[components.size()]);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

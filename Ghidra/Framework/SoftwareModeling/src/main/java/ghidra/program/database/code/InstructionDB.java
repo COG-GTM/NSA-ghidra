@@ -158,12 +158,12 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 		if (!proto.hasDelaySlots()) {
 			return 0;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return proto.getDelaySlotDepth(this);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -192,7 +192,7 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 		if (!isLengthOverridden()) {
 			return getBytes();
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			int len = proto.getLength();
@@ -203,13 +203,13 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 			return b;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public Address getFallFrom() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			// check if the instruction before this is in a delay slot
@@ -264,7 +264,7 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -337,13 +337,13 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 		}
 
 		// always reflects current flowOverride
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return proto.getOperandRefType(opIndex, this, new InstructionPcodeOverride(this));
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -354,7 +354,7 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 
 	@Override
 	public String getDefaultOperandRepresentation(int opIndex) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			List<Object> opList = getDefaultOperandRepresentationList(opIndex);
@@ -378,25 +378,25 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 			return strBuf.toString();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public List<Object> getDefaultOperandRepresentationList(int opIndex) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return proto.getOpRepresentationList(opIndex, this);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public int getOperandType(int opIndex) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			int optype = proto.getOpType(opIndex, this);
@@ -415,7 +415,7 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 			return optype;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -426,13 +426,13 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 			return EMPTY_OBJ_ARRAY;
 		}
 
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return proto.getOpObjects(opIndex, this);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -454,37 +454,37 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 			return null;
 		}
 
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return proto.getRegister(opIndex, this);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public Object[] getInputObjects() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return proto.getInputObjects(this);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public Object[] getResultObjects() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return proto.getResultObjects(this);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -500,7 +500,7 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 			return null;
 		}
 
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			Reference ref = refMgr.getPrimaryReferenceFrom(address, opIndex);
@@ -517,13 +517,13 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public String toString() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			StringBuffer stringBuffer = new StringBuffer();
@@ -548,7 +548,7 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 			return stringBuffer.toString();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -559,14 +559,14 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 		if (curMnemonic != null) {
 			return curMnemonic;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			mnemonicString = proto.getMnemonic(this);
 			return mnemonicString;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -582,13 +582,13 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 			return null;
 		}
 
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return proto.getScalar(opIndex, this);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 
 	}
@@ -677,7 +677,7 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 
 	@Override
 	public PcodeOp[] getPcode(boolean includeOverrides) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (!includeOverrides) {
@@ -686,20 +686,20 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 			return proto.getPcode(this, new InstructionPcodeOverride(this));
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public PcodeOp[] getPcode(int opIndex) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			// assumes operand pcode not affected by flow override
 			return proto.getPcode(this, opIndex);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -941,13 +941,13 @@ public class InstructionDB extends CodeUnitDB implements Instruction, Instructio
 		if (proto.getDelaySlotByteCount() <= 0) {
 			return proto.getLength();
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return proto.getFallThroughOffset(this);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

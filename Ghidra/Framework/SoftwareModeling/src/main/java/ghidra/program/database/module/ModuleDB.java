@@ -224,7 +224,7 @@ class ModuleDB extends DatabaseObject implements ProgramModule {
 
 	@Override
 	public Group[] getChildren() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			List<DBRecord> list = getParentChildRecords();
@@ -250,26 +250,26 @@ class ModuleDB extends DatabaseObject implements ProgramModule {
 			moduleMgr.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return new Group[0];
 	}
 
 	@Override
 	public String getComment() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return record.getString(ModuleDBAdapter.MODULE_COMMENTS_COL);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public Address getFirstAddress() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return findFirstAddress(this);
@@ -278,14 +278,14 @@ class ModuleDB extends DatabaseObject implements ProgramModule {
 			moduleMgr.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
 
 	@Override
 	public int getIndex(String name) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			DBRecord fragmentRecord = fragmentAdapter.getFragmentRecord(name);
@@ -307,14 +307,14 @@ class ModuleDB extends DatabaseObject implements ProgramModule {
 			moduleMgr.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return -1;
 	}
 
 	@Override
 	public Address getLastAddress() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return findLastAddress(this);
@@ -323,14 +323,14 @@ class ModuleDB extends DatabaseObject implements ProgramModule {
 			moduleMgr.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
 
 	@Override
 	public Address getMaxAddress() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return findMaxAddress(this, null);
@@ -339,14 +339,14 @@ class ModuleDB extends DatabaseObject implements ProgramModule {
 			moduleMgr.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
 
 	@Override
 	public Address getMinAddress() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return findMinAddress(this, null);
@@ -355,7 +355,7 @@ class ModuleDB extends DatabaseObject implements ProgramModule {
 			moduleMgr.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -378,13 +378,13 @@ class ModuleDB extends DatabaseObject implements ProgramModule {
 
 	@Override
 	public int getNumChildren() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return childCount;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -393,7 +393,7 @@ class ModuleDB extends DatabaseObject implements ProgramModule {
 		if (!(fragment instanceof FragmentDB)) {
 			return false;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			FragmentDB frag = (FragmentDB) fragment;
@@ -403,7 +403,7 @@ class ModuleDB extends DatabaseObject implements ProgramModule {
 			moduleMgr.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return false;
 	}
@@ -597,19 +597,19 @@ class ModuleDB extends DatabaseObject implements ProgramModule {
 
 	@Override
 	public String getName() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return record.getString(ModuleDBAdapter.MODULE_NAME_COL);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public int getNumParents() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			Field[] keys =
@@ -620,7 +620,7 @@ class ModuleDB extends DatabaseObject implements ProgramModule {
 			moduleMgr.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return 0;
 	}

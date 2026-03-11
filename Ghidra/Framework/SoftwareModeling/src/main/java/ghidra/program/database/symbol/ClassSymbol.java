@@ -45,7 +45,7 @@ public class ClassSymbol extends SymbolDB {
 
 	@Override
 	public GhidraClass getObject() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (!checkIsValid()) {
 				return null;
@@ -56,7 +56,7 @@ public class ClassSymbol extends SymbolDB {
 			return ghidraClass;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

@@ -67,7 +67,7 @@ public class VariableSymbolDB extends SymbolDB {
 	}
 
 	public VariableStorage getVariableStorage() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (!checkIsValid() || variableStorage != null) {
 				return variableStorage;
@@ -95,7 +95,7 @@ public class VariableSymbolDB extends SymbolDB {
 			symbolMgr.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return variableStorage;
 	}
@@ -306,14 +306,14 @@ public class VariableSymbolDB extends SymbolDB {
 
 	@Override
 	public Reference[] getReferences(TaskMonitor monitor) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			ReferenceManager rm = symbolMgr.getReferenceManager();
 			return rm.getReferencesTo(getObject());
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -327,7 +327,7 @@ public class VariableSymbolDB extends SymbolDB {
 	 * @return the symbol data
 	 */
 	protected int getVariableOffset() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (record != null) {
@@ -336,7 +336,7 @@ public class VariableSymbolDB extends SymbolDB {
 			return 0;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

@@ -53,7 +53,7 @@ public class SourceMapEntryIteratorDB implements SourceMapEntryIterator {
 		if (nextEntry != null) {
 			return true;
 		}
-		sourceManager.lock.acquire();
+		sourceManager.lock.acquireRead();
 		try {
 			boolean recIterNext = forward ? recIter.hasNext() : recIter.hasPrevious();
 			if (!recIterNext) {
@@ -68,7 +68,7 @@ public class SourceMapEntryIteratorDB implements SourceMapEntryIterator {
 			return false;
 		}
 		finally {
-			sourceManager.lock.release();
+			sourceManager.lock.releaseRead();
 		}
 	}
 

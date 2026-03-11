@@ -366,7 +366,7 @@ public class SourceFileManagerDB implements SourceFileManager, ManagerDB, ErrorH
 
 		List<SourceMapEntry> sourceMapEntries = new ArrayList<>();
 
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			RecordIterator recIter = sourceMapTableAdapter.getSourceMapRecordIterator(addr, false);
 			boolean foundNonZeroLength = false;
@@ -396,7 +396,7 @@ public class SourceFileManagerDB implements SourceFileManager, ManagerDB, ErrorH
 			dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		Collections.sort(sourceMapEntries);
 		return sourceMapEntries;
@@ -491,7 +491,7 @@ public class SourceFileManagerDB implements SourceFileManager, ManagerDB, ErrorH
 		if (addrs == null || addrs.isEmpty()) {
 			return false;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			for (AddressRangeIterator rangeIter = addrs.getAddressRanges(); rangeIter.hasNext();) {
 				AddressRange r = rangeIter.next();
@@ -520,7 +520,7 @@ public class SourceFileManagerDB implements SourceFileManager, ManagerDB, ErrorH
 			return false;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -532,7 +532,7 @@ public class SourceFileManagerDB implements SourceFileManager, ManagerDB, ErrorH
 	@Override
 	public List<SourceFile> getMappedSourceFiles() {
 		List<SourceFile> sourceFiles = new ArrayList<>();
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			for (RecordIterator sourceFileRecordIter =
 				sourceFileTableAdapter.getRecords(); sourceFileRecordIter
@@ -551,7 +551,7 @@ public class SourceFileManagerDB implements SourceFileManager, ManagerDB, ErrorH
 			dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return sourceFiles;
 	}
@@ -559,7 +559,7 @@ public class SourceFileManagerDB implements SourceFileManager, ManagerDB, ErrorH
 	@Override
 	public List<SourceFile> getAllSourceFiles() {
 		List<SourceFile> sourceFiles = new ArrayList<>();
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			for (RecordIterator recordIter = sourceFileTableAdapter.getRecords(); recordIter
 					.hasNext();) {
@@ -571,7 +571,7 @@ public class SourceFileManagerDB implements SourceFileManager, ManagerDB, ErrorH
 			dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return sourceFiles;
 	}
@@ -628,12 +628,12 @@ public class SourceFileManagerDB implements SourceFileManager, ManagerDB, ErrorH
 		if (sourceFile == null) {
 			return false;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return getKeyForSourceFile(sourceFile) != null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -650,7 +650,7 @@ public class SourceFileManagerDB implements SourceFileManager, ManagerDB, ErrorH
 			throw new IllegalArgumentException("maxLine cannot be less than minLine");
 		}
 		List<SourceMapEntry> entries = new ArrayList<>();
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			Long key = getKeyForSourceFile(sourceFile);
 			if (key == null) {
@@ -669,7 +669,7 @@ public class SourceFileManagerDB implements SourceFileManager, ManagerDB, ErrorH
 			}
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		Collections.sort(entries);
 		return entries;

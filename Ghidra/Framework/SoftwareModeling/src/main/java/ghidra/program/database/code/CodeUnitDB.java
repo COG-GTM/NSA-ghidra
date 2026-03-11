@@ -194,7 +194,7 @@ abstract class CodeUnitDB extends DatabaseObject implements CodeUnit, ProcessorC
 		if (commentType == null) {
 			return null;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (!checkedComments) {
@@ -206,7 +206,7 @@ abstract class CodeUnitDB extends DatabaseObject implements CodeUnit, ProcessorC
 			return commentRec.getString(commentType.ordinal());
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

@@ -90,7 +90,7 @@ public class LibrarySymbol extends SymbolDB {
 
 	@Override
 	public Library getObject() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (!checkIsValid()) {
 				return null;
@@ -101,7 +101,7 @@ public class LibrarySymbol extends SymbolDB {
 			return library;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
