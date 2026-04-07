@@ -81,7 +81,12 @@ public class YaraBytePatternExtractor {
 			Instruction instr = listing.getInstructionAt(addr);
 			if (instr != null) {
 				processInstruction(hexPattern, instr, addr);
-				addr = addr.add(instr.getLength());
+				try {
+					addr = addr.addNoWrap(instr.getLength());
+				}
+				catch (AddressOverflowException e) {
+					break;
+				}
 			}
 			else {
 				// Data region: read raw bytes, wildcard relocations

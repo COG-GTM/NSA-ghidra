@@ -65,20 +65,24 @@ public class YaraRuleBuilder {
 		// Metadata
 		sb.append("    meta:\n");
 		if (md5 != null) {
-			sb.append("        md5 = \"").append(md5).append("\"\n");
+			sb.append("        md5 = \"").append(escapeYaraString(md5))
+				.append("\"\n");
 		}
 		if (sha256 != null) {
-			sb.append("        sha256 = \"").append(sha256).append("\"\n");
+			sb.append("        sha256 = \"").append(escapeYaraString(sha256))
+				.append("\"\n");
 		}
 		if (author != null) {
-			sb.append("        author = \"").append(author).append("\"\n");
+			sb.append("        author = \"").append(escapeYaraString(author))
+				.append("\"\n");
 		}
 		if (date != null) {
-			sb.append("        date = \"").append(date).append("\"\n");
+			sb.append("        date = \"").append(escapeYaraString(date))
+				.append("\"\n");
 		}
 		if (description != null) {
-			sb.append("        description = \"").append(description)
-				.append("\"\n");
+			sb.append("        description = \"")
+				.append(escapeYaraString(description)).append("\"\n");
 		}
 
 		// Strings section (only emit if there are patterns or indicators)
@@ -89,10 +93,8 @@ public class YaraRuleBuilder {
 					.append(bytePatterns.get(i)).append(" }\n");
 			}
 			for (Map.Entry<String, String> entry : stringIndicators.entrySet()) {
-				String escaped =
-					entry.getValue().replace("\\", "\\\\").replace("\"", "\\\"");
 				sb.append("        ").append(entry.getKey()).append(" = \"")
-					.append(escaped).append("\"\n");
+					.append(escapeYaraString(entry.getValue())).append("\"\n");
 			}
 		}
 
@@ -124,5 +126,9 @@ public class YaraRuleBuilder {
 
 		sb.append("}\n");
 		return sb.toString();
+	}
+
+	private static String escapeYaraString(String value) {
+		return value.replace("\\", "\\\\").replace("\"", "\\\"");
 	}
 }
