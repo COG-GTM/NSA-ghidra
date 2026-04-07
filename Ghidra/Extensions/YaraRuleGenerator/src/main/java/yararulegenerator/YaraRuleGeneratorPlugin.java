@@ -116,6 +116,10 @@ public class YaraRuleGeneratorPlugin extends Plugin {
 	}
 
 	private String sanitizeRuleName(String name) {
-		return name.replaceAll("[^a-zA-Z0-9_]", "_");
+		String sanitized = name.replaceAll("[^a-zA-Z0-9_]", "_");
+		if (sanitized.isEmpty() || Character.isDigit(sanitized.charAt(0))) {
+			sanitized = "rule_" + sanitized;
+		}
+		return sanitized;
 	}
 }

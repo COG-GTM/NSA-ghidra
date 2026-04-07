@@ -103,8 +103,15 @@ public class YaraBytePatternExtractor {
 		SleighDebugLogger logger =
 			new SleighDebugLogger(program, addr, SleighDebugMode.VERBOSE);
 		if (logger.parseFailed()) {
-			// Fallback: read raw byte
-			appendRawByteOrWildcard(hexPattern, addr);
+			// Fallback: read raw bytes for entire instruction
+			for (int i = 0; i < instr.getLength(); i++) {
+				try {
+					appendRawByteOrWildcard(hexPattern, addr.addNoWrap(i));
+				}
+				catch (AddressOverflowException e) {
+					break;
+				}
+			}
 			return;
 		}
 
@@ -114,6 +121,9 @@ public class YaraBytePatternExtractor {
 			memory.getBytes(addr, rawBytes);
 		}
 		catch (MemoryAccessException e) {
+			for (int i = 0; i < instr.getLength(); i++) {
+				hexPattern.append("?? ");
+			}
 			return;
 		}
 

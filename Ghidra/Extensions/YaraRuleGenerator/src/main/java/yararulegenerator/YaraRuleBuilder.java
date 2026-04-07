@@ -81,17 +81,19 @@ public class YaraRuleBuilder {
 				.append("\"\n");
 		}
 
-		// Strings section
-		sb.append("\n    strings:\n");
-		for (int i = 0; i < bytePatterns.size(); i++) {
-			sb.append("        $code_").append(i).append(" = { ")
-				.append(bytePatterns.get(i)).append(" }\n");
-		}
-		for (Map.Entry<String, String> entry : stringIndicators.entrySet()) {
-			String escaped =
-				entry.getValue().replace("\\", "\\\\").replace("\"", "\\\"");
-			sb.append("        ").append(entry.getKey()).append(" = \"")
-				.append(escaped).append("\"\n");
+		// Strings section (only emit if there are patterns or indicators)
+		if (!bytePatterns.isEmpty() || !stringIndicators.isEmpty()) {
+			sb.append("\n    strings:\n");
+			for (int i = 0; i < bytePatterns.size(); i++) {
+				sb.append("        $code_").append(i).append(" = { ")
+					.append(bytePatterns.get(i)).append(" }\n");
+			}
+			for (Map.Entry<String, String> entry : stringIndicators.entrySet()) {
+				String escaped =
+					entry.getValue().replace("\\", "\\\\").replace("\"", "\\\"");
+				sb.append("        ").append(entry.getKey()).append(" = \"")
+					.append(escaped).append("\"\n");
+			}
 		}
 
 		// Condition block
