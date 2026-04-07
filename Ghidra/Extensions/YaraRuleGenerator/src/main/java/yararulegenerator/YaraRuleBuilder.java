@@ -129,6 +129,38 @@ public class YaraRuleBuilder {
 	}
 
 	private static String escapeYaraString(String value) {
-		return value.replace("\\", "\\\\").replace("\"", "\\\"");
+		StringBuilder sb = new StringBuilder(value.length());
+		for (int i = 0; i < value.length(); i++) {
+			char c = value.charAt(i);
+			switch (c) {
+				case '\\':
+					sb.append("\\\\");
+					break;
+				case '"':
+					sb.append("\\\"");
+					break;
+				case '\n':
+					sb.append("\\n");
+					break;
+				case '\r':
+					sb.append("\\r");
+					break;
+				case '\t':
+					sb.append("\\t");
+					break;
+				case '\0':
+					sb.append("\\x00");
+					break;
+				default:
+					if (c < 0x20 || c == 0x7F) {
+						sb.append(String.format("\\x%02x", (int) c));
+					}
+					else {
+						sb.append(c);
+					}
+					break;
+			}
+		}
+		return sb.toString();
 	}
 }
