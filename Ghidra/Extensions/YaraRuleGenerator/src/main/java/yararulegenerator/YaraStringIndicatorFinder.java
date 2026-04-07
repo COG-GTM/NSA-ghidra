@@ -16,6 +16,7 @@
 package yararulegenerator;
 
 import ghidra.program.model.address.*;
+import ghidra.program.model.data.StringDataInstance;
 import ghidra.program.model.listing.*;
 import ghidra.program.model.symbol.*;
 import ghidra.program.util.DefinedStringIterator;
@@ -78,9 +79,8 @@ public class YaraStringIndicatorFinder {
 			DefinedStringIterator.forProgram(program, addrSet);
 		while (stringIt.hasNext()) {
 			Data data = stringIt.next();
-			String value = data.getDefaultValueRepresentation();
-			if (value != null) {
-				value = value.replace("\"", "").trim();
+			String value = getStringValue(data);
+			if (value != null && !value.isEmpty()) {
 				counter = classifyAndAdd(indicators, seen, value, counter);
 			}
 		}
@@ -98,10 +98,8 @@ public class YaraStringIndicatorFinder {
 						Data refData =
 							listing.getDefinedDataAt(ref.getToAddress());
 						if (refData != null && refData.hasStringValue()) {
-							String val =
-								refData.getDefaultValueRepresentation();
-							if (val != null) {
-								val = val.replace("\"", "").trim();
+							String val = getStringValue(refData);
+							if (val != null && !val.isEmpty()) {
 								counter = classifyAndAdd(indicators, seen,
 									val, counter);
 							}
@@ -112,6 +110,23 @@ public class YaraStringIndicatorFinder {
 		}
 
 		return indicators;
+	}
+
+	/**
+	 * Extract the raw string value from a Data element using StringDataInstance,
+	 * avoiding the display-formatted representation which includes C-style
+	 * escape sequences and surrounding quotes.
+	 */
+	private static String getStringValue(Data data) {
+		StringDataInstance sdi = StringDataInstance.getStringDataInstance(data);
+		if (sdi == null) {
+			return null;
+		}
+		String value = sdi.getStringValue();
+		if (value != null) {
+			value = value.trim();
+		}
+		return value;
 	}
 
 	private int classifyAndAdd(Map<String, String> indicators, Set<String> seen,
