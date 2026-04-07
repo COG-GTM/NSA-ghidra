@@ -21,6 +21,7 @@ import ghidra.program.model.address.*;
 import ghidra.program.model.listing.*;
 import ghidra.program.model.mem.Memory;
 import ghidra.program.model.mem.MemoryAccessException;
+import ghidra.program.model.reloc.Relocation;
 import ghidra.program.model.reloc.RelocationTable;
 import ghidra.program.util.ProgramSelection;
 
@@ -77,10 +78,15 @@ public class YaraBytePatternExtractor {
 		Address addr = range.getMinAddress();
 		Address end = range.getMaxAddress();
 
+		// Pre-compute full byte coverage of all relocations in this range
+		// so multi-byte relocations are fully wildcarded, not just their
+		// starting address.
+		AddressSet relocCoverage = buildRelocationCoverage(range);
+
 		while (addr != null && addr.compareTo(end) <= 0) {
 			Instruction instr = listing.getInstructionAt(addr);
 			if (instr != null) {
-				processInstruction(hexPattern, instr, addr);
+				processInstruction(hexPattern, instr, addr, relocCoverage);
 				try {
 					addr = addr.addNoWrap(instr.getLength());
 				}
@@ -90,7 +96,7 @@ public class YaraBytePatternExtractor {
 			}
 			else {
 				// Data region: read raw bytes, wildcard relocations
-				appendRawByteOrWildcard(hexPattern, addr);
+				appendRawByteOrWildcard(hexPattern, addr, relocCoverage);
 				try {
 					addr = addr.addNoWrap(1);
 				}
@@ -103,7 +109,7 @@ public class YaraBytePatternExtractor {
 	}
 
 	private void processInstruction(StringBuilder hexPattern, Instruction instr,
-			Address addr) {
+			Address addr, AddressSet relocCoverage) {
 
 		SleighDebugLogger logger =
 			new SleighDebugLogger(program, addr, SleighDebugMode.VERBOSE);
@@ -111,7 +117,8 @@ public class YaraBytePatternExtractor {
 			// Fallback: read raw bytes for entire instruction
 			for (int i = 0; i < instr.getLength(); i++) {
 				try {
-					appendRawByteOrWildcard(hexPattern, addr.addNoWrap(i));
+					appendRawByteOrWildcard(hexPattern, addr.addNoWrap(i),
+						relocCoverage);
 				}
 				catch (AddressOverflowException e) {
 					break;
@@ -142,7 +149,7 @@ public class YaraBytePatternExtractor {
 			if (opMask != null) {
 				CodeUnit cu = listing.getCodeUnitAt(addr);
 				if (cu != null && cu.getAddress(op) == null &&
-					!hasRelocationInRange(addr, instr.getLength())) {
+					!relocCoverage.intersects(addr, addr.add(instr.getLength() - 1))) {
 					for (int i = 0; i < opMask.length && i < combinedMask.length; i++) {
 						combinedMask[i] |= opMask[i];
 					}
@@ -165,8 +172,9 @@ public class YaraBytePatternExtractor {
 		}
 	}
 
-	private void appendRawByteOrWildcard(StringBuilder sb, Address addr) {
-		if (relocationTable.hasRelocation(addr)) {
+	private void appendRawByteOrWildcard(StringBuilder sb, Address addr,
+			AddressSet relocCoverage) {
+		if (relocCoverage.contains(addr)) {
 			sb.append("?? ");
 		}
 		else {
@@ -180,17 +188,34 @@ public class YaraBytePatternExtractor {
 		}
 	}
 
-	private boolean hasRelocationInRange(Address instrAddr, int instrLen) {
-		for (int i = 0; i < instrLen; i++) {
+	/**
+	 * Build an {@link AddressSet} covering every byte spanned by relocations
+	 * within the given range.  {@code RelocationTable.hasRelocation()} only
+	 * matches the exact start address of a relocation, so a single-byte check
+	 * misses the remaining bytes of multi-byte relocations (typically 4 or 8
+	 * bytes).  Pre-computing the full coverage lets callers do a simple
+	 * {@code contains()} check per byte.
+	 */
+	private AddressSet buildRelocationCoverage(AddressRange range) {
+		AddressSet coverage = new AddressSet();
+		AddressSet rangeSet = new AddressSet(range);
+		Iterator<Relocation> it = relocationTable.getRelocations(rangeSet);
+		while (it.hasNext()) {
+			Relocation reloc = it.next();
+			Address relocAddr = reloc.getAddress();
+			int len = reloc.getLength();
+			if (len <= 0) {
+				// No recorded byte length; assume pointer-sized relocation
+				len = program.getDefaultPointerSize();
+			}
 			try {
-				if (relocationTable.hasRelocation(instrAddr.addNoWrap(i))) {
-					return true;
-				}
+				coverage.add(relocAddr, relocAddr.addNoWrap(len - 1));
 			}
 			catch (AddressOverflowException e) {
-				break;
+				coverage.add(relocAddr,
+					relocAddr.getAddressSpace().getMaxAddress());
 			}
 		}
-		return false;
+		return coverage;
 	}
 }
