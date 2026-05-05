@@ -47,13 +47,15 @@
 //  - Anti-VM string artefacts (VMware, VirtualBox, QEMU, Xen, Parallels,
 //    Sandboxie)
 //
-//To smoke-test the script without a real malware sample, build the bundled
-//PE32 fixture with AntiDebugAntiVMDetector_build_fixture.py, import the
-//resulting AntiDebugAntiVMDetector_fixture.bin into Ghidra as a 32-bit PE,
-//let auto-analysis finish, then run this script.  If invoked with a script
+//To smoke-test the script without a real malware sample, build the synthetic
+//PE32 fixture with AntiDebugAntiVMDetector_build_fixture.py (the .bin itself
+//is intentionally NOT committed to the repository per Ghidra's contribution
+//policy on self-generated binaries), import the resulting
+//AntiDebugAntiVMDetector_fixture.bin into Ghidra as a 32-bit PE, let
+//auto-analysis finish, then run this script.  If invoked with a script
 //argument of "--selftest" (headless) or by answering "Yes" to the self-test
 //prompt (interactive) the script also asserts a minimum number of findings
-//per technique against the bundled fixture.
+//per technique against the fixture.
 //
 //@category Analysis
 //@menupath Tools.Anti-Debug.Detect Techniques
@@ -242,9 +244,10 @@ public class AntiDebugAntiVMDetector extends GhidraScript {
 		}
 		try {
 			return askYesNo("AntiDebugAntiVMDetector",
-				"Run in self-test mode? (validates findings against the bundled "
-					+ "AntiDebugAntiVMDetector_fixture.bin -- answer No for a "
-					+ "normal scan of an unknown binary)");
+				"Run in self-test mode? (validates findings against the "
+					+ "synthetic AntiDebugAntiVMDetector_fixture.bin -- build it "
+					+ "first with AntiDebugAntiVMDetector_build_fixture.py.  "
+					+ "Answer No for a normal scan of an unknown binary.)");
 		}
 		catch (Exception e) {
 			// askYesNo throws if the user cancels -- treat as a normal run.
@@ -382,24 +385,29 @@ public class AntiDebugAntiVMDetector extends GhidraScript {
 
 	private void recordCpuidFinding(Instruction insn) {
 		// Walk back up to four instructions looking for the most-recent
-		// `mov eax, <imm>`.  The value loaded by THAT mov is what cpuid sees
-		// in EAX; we must not skip past it to find an older mov that happened
-		// to set eax to 0x40000000 earlier in the function.
+		// `mov eax|rax, <imm>`.  The value loaded by THAT mov is what cpuid
+		// sees in EAX; we must not skip past it to find an older mov that
+		// happened to set eax to 0x40000000 earlier in the function.  Both
+		// EAX and RAX are accepted because on x64 the leaf is often loaded
+		// via `mov rax, 0x40000000` (which Ghidra prints with the RAX name
+		// even though only the low 32 bits feed cpuid).
 		Instruction cursor = insn.getPrevious();
 		boolean hyperLeaf = false;
 		for (int i = 0; cursor != null && i < 4; i++) {
 			if ("MOV".equalsIgnoreCase(cursor.getMnemonicString())) {
 				Object[] op0 = cursor.getOpObjects(0);
 				Object[] op1 = cursor.getOpObjects(1);
-				if (op0.length == 1 && op0[0] instanceof Register
-						&& "EAX".equalsIgnoreCase(((Register) op0[0]).getName())) {
-					if (op1.length == 1 && op1[0] instanceof Scalar
-							&& ((Scalar) op1[0]).getUnsignedValue() == 0x40000000L) {
-						hyperLeaf = true;
+				if (op0.length == 1 && op0[0] instanceof Register) {
+					String regName = ((Register) op0[0]).getName().toUpperCase();
+					if ("EAX".equals(regName) || "RAX".equals(regName)) {
+						if (op1.length == 1 && op1[0] instanceof Scalar
+								&& ((Scalar) op1[0]).getUnsignedValue() == 0x40000000L) {
+							hyperLeaf = true;
+						}
+						// First mov to E/RAX establishes EAX at the cpuid;
+						// stop walking regardless of value.
+						break;
 					}
-					// First mov-to-eax found establishes EAX at the cpuid;
-					// stop walking regardless of value.
-					break;
 				}
 			}
 			cursor = cursor.getPrevious();
@@ -878,7 +886,8 @@ public class AntiDebugAntiVMDetector extends GhidraScript {
 	// ------------------------------------------------------------------
 
 	private void runSelfTestAssertions() throws Exception {
-		// Counts expected on the bundled fixture.  We assert lower bounds to
+		// Counts expected on the synthetic fixture produced by
+		// AntiDebugAntiVMDetector_build_fixture.py.  We assert lower bounds to
 		// stay robust against future changes that *add* coverage.
 		Map<String, Integer> required = new LinkedHashMap<>();
 		required.put("Win32 IsDebuggerPresent",                1);

@@ -11,8 +11,7 @@ The script is a single Java file plus a synthetic test fixture, all under
 |------|---------|
 | `AntiDebugAntiVMDetector.java` | The detector script. |
 | `AntiDebugAntiVMDetector.README.md` | This document. |
-| `AntiDebugAntiVMDetector_build_fixture.py` | Builder for the synthetic PE32 test fixture. |
-| `AntiDebugAntiVMDetector_fixture.bin` | Pre-built benign PE32 fixture exercising every detection branch. |
+| `AntiDebugAntiVMDetector_build_fixture.py` | Builder for the synthetic PE32 test fixture (`AntiDebugAntiVMDetector_fixture.bin`). The repository follows Ghidra's contribution policy of *not* committing self-generated binaries; the analyst regenerates the fixture locally before running the self-test (see below). |
 
 ## What the script detects
 
@@ -69,23 +68,44 @@ support/analyzeHeadless <project_dir> <project_name> \
     -postScript AntiDebugAntiVMDetector.java
 ```
 
-To run the self-test in headless mode, pass `--selftest` as a script argument:
+To run the self-test in headless mode, build the fixture first (it is **not**
+committed to the repository), then point `analyzeHeadless` at the freshly
+built `.bin` and pass `--selftest` as a script argument:
 
 ```sh
+python3 Ghidra/Features/Base/ghidra_scripts/AntiDebugAntiVMDetector_build_fixture.py
 support/analyzeHeadless <project_dir> <project_name> \
     -import Ghidra/Features/Base/ghidra_scripts/AntiDebugAntiVMDetector_fixture.bin \
-    -postScript AntiDebugAntiVMDetector.java --selftest
+    -scriptPath Ghidra/Features/Base/ghidra_scripts \
+    -postScript AntiDebugAntiVMDetector.java --selftest \
+    -deleteProject
 ```
+
+The builder script has no third-party dependencies (Python 3 standard library
+only) and produces a deterministic 2 048-byte PE32 every time, so the
+`-import` path above is stable across runs and machines.
 
 The script throws an `AssertionError` if any required technique is missing,
 which causes `analyzeHeadless` to exit non-zero.
 
-## Self-test against the bundled fixture
+## Self-test against the synthetic fixture
 
-`AntiDebugAntiVMDetector_fixture.bin` is a hand-crafted, intentionally
-*non-runnable* PE32 (file extension `.bin` so it cannot be double-clicked).
-Its entry point is a single `int 3` followed by the synthetic detection
-patterns and a `ret` -- it does not perform any real action when loaded.
+The builder produces `AntiDebugAntiVMDetector_fixture.bin`, a hand-crafted,
+intentionally *non-runnable* PE32 (file extension `.bin` so it cannot be
+double-clicked). Its entry point is a single `int 3` followed by a `ret` and
+then the synthetic detection patterns -- it does not perform any real action
+when loaded.
+
+Build it locally before running the self-test:
+
+```sh
+python3 Ghidra/Features/Base/ghidra_scripts/AntiDebugAntiVMDetector_build_fixture.py
+```
+
+The builder uses only the Python 3 standard library and produces the same
+2 048-byte file every time. The fixture is **not** committed to the repository
+(per Ghidra's `CONTRIBUTING.md` policy on self-generated binaries) and is
+regenerated on demand.
 
 The fixture exercises every detection branch in the script:
 
@@ -101,14 +121,6 @@ The fixture exercises every detection branch in the script:
 - `mov eax, fs:[0x30]`, `mov eax, fs:[0x18]`, and `mov eax, fs:[0x60]`.
 - 12 anti-VM strings (six hypervisor brands plus six artefact names),
   each referenced by code.
-
-To regenerate the fixture from source (after editing the builder):
-
-```sh
-python3 Ghidra/Features/Base/ghidra_scripts/AntiDebugAntiVMDetector_build_fixture.py
-```
-
-The output is fully deterministic.
 
 ## Walkthrough — what to expect on the fixture
 
