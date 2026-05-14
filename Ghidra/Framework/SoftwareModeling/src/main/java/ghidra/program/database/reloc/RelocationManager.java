@@ -194,7 +194,7 @@ public class RelocationManager implements RelocationTable, ManagerDB {
 
 	@Override
 	public boolean hasRelocation(Address addr) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			RecordIterator it = adapter.iterator(addr);
 			if (!it.hasNext()) {
@@ -208,14 +208,14 @@ public class RelocationManager implements RelocationTable, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return false;
 	}
 
 	@Override
 	public List<Relocation> getRelocations(Address addr) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			List<Relocation> list = null;
 			RecordIterator it = adapter.iterator(addr);
@@ -236,7 +236,7 @@ public class RelocationManager implements RelocationTable, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -258,7 +258,7 @@ public class RelocationManager implements RelocationTable, ManagerDB {
 	@Override
 	public Iterator<Relocation> getRelocations() {
 		RecordIterator ri = null;
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			ri = adapter.iterator();
 		}
@@ -266,14 +266,14 @@ public class RelocationManager implements RelocationTable, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return new RelocationIterator(ri);
 	}
 
 	@Override
 	public Address getRelocationAddressAfter(Address addr) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			RecordIterator it = adapter.iterator(addr);
 			while (it.hasNext()) {
@@ -288,7 +288,7 @@ public class RelocationManager implements RelocationTable, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -296,7 +296,7 @@ public class RelocationManager implements RelocationTable, ManagerDB {
 	@Override
 	public Iterator<Relocation> getRelocations(AddressSetView set) {
 		RecordIterator it = null;
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			it = adapter.iterator(set);
 		}
@@ -304,7 +304,7 @@ public class RelocationManager implements RelocationTable, ManagerDB {
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return new RelocationIterator(it);
 	}
@@ -320,7 +320,7 @@ public class RelocationManager implements RelocationTable, ManagerDB {
 		public boolean hasNext() {
 			if (it == null)
 				return false;
-			lock.acquire();
+			lock.acquireRead();
 			try {
 				return it.hasNext();
 			}
@@ -328,7 +328,7 @@ public class RelocationManager implements RelocationTable, ManagerDB {
 				program.dbError(e);
 			}
 			finally {
-				lock.release();
+				lock.releaseRead();
 			}
 			return false;
 		}

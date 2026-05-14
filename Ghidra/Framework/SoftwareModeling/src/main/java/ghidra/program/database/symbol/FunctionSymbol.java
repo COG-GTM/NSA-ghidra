@@ -157,7 +157,7 @@ public class FunctionSymbol extends MemorySymbol {
 
 	@Override
 	public ProgramLocation getProgramLocation() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (!checkIsValid()) {
 				return null;
@@ -168,7 +168,7 @@ public class FunctionSymbol extends MemorySymbol {
 				f.getReturnType().getName());
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -266,7 +266,7 @@ public class FunctionSymbol extends MemorySymbol {
 
 	@Override
 	public Reference[] getReferences(TaskMonitor monitor) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			Reference[] refs = super.getReferences(monitor);
@@ -294,13 +294,13 @@ public class FunctionSymbol extends MemorySymbol {
 			return newRefs;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public int getReferenceCount() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			int count = super.getReferenceCount();
@@ -311,13 +311,13 @@ public class FunctionSymbol extends MemorySymbol {
 			return count;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public boolean hasReferences() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (super.hasReferences()) {
@@ -327,7 +327,7 @@ public class FunctionSymbol extends MemorySymbol {
 			return thunkIds != null ? (thunkIds.size() != 0) : false;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

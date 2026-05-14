@@ -159,7 +159,7 @@ class EnumDB extends DataTypeDB implements Enum {
 
 	@Override
 	public long getValue(String valueName) throws NoSuchElementException {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			initializeIfNeeded();
@@ -170,13 +170,13 @@ class EnumDB extends DataTypeDB implements Enum {
 			return value;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public String getName(long value) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			initializeIfNeeded();
@@ -187,13 +187,13 @@ class EnumDB extends DataTypeDB implements Enum {
 			return list.get(0);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public String[] getNames(long value) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			initializeIfNeeded();
@@ -204,7 +204,7 @@ class EnumDB extends DataTypeDB implements Enum {
 			return list.toArray(new String[0]);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -215,7 +215,7 @@ class EnumDB extends DataTypeDB implements Enum {
 
 	@Override
 	public String getComment(String valueName) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			initializeIfNeeded();
@@ -226,26 +226,26 @@ class EnumDB extends DataTypeDB implements Enum {
 			return comment;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public long[] getValues() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			initializeIfNeeded();
 			return valueMap.keySet().stream().mapToLong(Long::longValue).toArray();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public String[] getNames() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			initializeIfNeeded();
@@ -260,20 +260,20 @@ class EnumDB extends DataTypeDB implements Enum {
 			return names.toArray(new String[0]);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public int getCount() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			initializeIfNeeded();
 			return nameMap.size();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -437,25 +437,25 @@ class EnumDB extends DataTypeDB implements Enum {
 
 	@Override
 	public String getMnemonic(Settings settings) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return getDisplayName();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public int getLength() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return record.getByteValue(EnumDBAdapter.ENUM_SIZE_COL);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -466,14 +466,14 @@ class EnumDB extends DataTypeDB implements Enum {
 
 	@Override
 	public String getDescription() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			String s = record.getString(EnumDBAdapter.ENUM_COMMENT_COL);
 			return s == null ? "" : s;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -496,7 +496,7 @@ class EnumDB extends DataTypeDB implements Enum {
 
 	@Override
 	public Object getValue(MemBuffer buf, Settings settings, int length) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			long value = 0;
@@ -520,7 +520,7 @@ class EnumDB extends DataTypeDB implements Enum {
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -531,7 +531,7 @@ class EnumDB extends DataTypeDB implements Enum {
 
 	@Override
 	public String getRepresentation(MemBuffer buf, Settings settings, int length) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			long value = 0;
@@ -556,7 +556,7 @@ class EnumDB extends DataTypeDB implements Enum {
 			return "??";
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -664,27 +664,27 @@ class EnumDB extends DataTypeDB implements Enum {
 
 	@Override
 	public long getMinPossibleValue() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			int length = record.getByteValue(EnumDBAdapter.ENUM_SIZE_COL);
 			return getMinPossibleValue(length, signedState != UNSIGNED);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public long getMaxPossibleValue() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			int length = record.getByteValue(EnumDBAdapter.ENUM_SIZE_COL);
 			return getMaxPossibleValue(length, signedState == SIGNED);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -854,59 +854,59 @@ class EnumDB extends DataTypeDB implements Enum {
 
 	@Override
 	public boolean contains(String name) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			initializeIfNeeded();
 			return nameMap.containsKey(name);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public boolean contains(long value) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			initializeIfNeeded();
 			return valueMap.containsKey(value);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public boolean isSigned() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			initializeIfNeeded();
 			return signedState == SIGNED;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public EnumSignedState getSignedState() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			initializeIfNeeded();
 			return signedState;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public int getMinimumPossibleLength() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			initializeIfNeeded();
@@ -930,7 +930,7 @@ class EnumDB extends DataTypeDB implements Enum {
 			return 8;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 }

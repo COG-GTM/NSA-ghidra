@@ -96,7 +96,7 @@ class ArrayDB extends DataTypeDB implements Array {
 		if (localDisplayName != null && !isInvalid()) {
 			return localDisplayName;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (displayName == null) {
@@ -105,7 +105,7 @@ class ArrayDB extends DataTypeDB implements Array {
 			return displayName;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -146,7 +146,7 @@ class ArrayDB extends DataTypeDB implements Array {
 
 	@Override
 	public DataType getDataType() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			long dataTypeID = record.getLongValue(ArrayDBAdapter.ARRAY_DT_ID_COL);
@@ -157,7 +157,7 @@ class ArrayDB extends DataTypeDB implements Array {
 			return dt;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -178,7 +178,7 @@ class ArrayDB extends DataTypeDB implements Array {
 
 	@Override
 	public int getElementLength() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			DataType dt = getDataType();
@@ -193,7 +193,7 @@ class ArrayDB extends DataTypeDB implements Array {
 			return elementLength;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

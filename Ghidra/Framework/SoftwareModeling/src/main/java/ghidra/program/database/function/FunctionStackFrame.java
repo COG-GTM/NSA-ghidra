@@ -136,7 +136,7 @@ class FunctionStackFrame implements StackFrame {
 	 */
 	@Override
 	public Variable[] getStackVariables() {
-		function.manager.lock.acquire();
+		function.manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			Variable[] temp = new Variable[variables.length];
@@ -144,7 +144,7 @@ class FunctionStackFrame implements StackFrame {
 			return temp;
 		}
 		finally {
-			function.manager.lock.release();
+			function.manager.lock.releaseRead();
 		}
 	}
 
@@ -154,7 +154,7 @@ class FunctionStackFrame implements StackFrame {
 	 */
 	@Override
 	public Variable[] getLocals() {
-		function.manager.lock.acquire();
+		function.manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			ArrayList<Variable> list = new ArrayList<Variable>();
@@ -167,7 +167,7 @@ class FunctionStackFrame implements StackFrame {
 			return list.toArray(vars);
 		}
 		finally {
-			function.manager.lock.release();
+			function.manager.lock.releaseRead();
 		}
 	}
 
@@ -177,7 +177,7 @@ class FunctionStackFrame implements StackFrame {
 	 */
 	@Override
 	public Parameter[] getParameters() {
-		function.manager.lock.acquire();
+		function.manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			ArrayList<Parameter> list = new ArrayList<Parameter>();
@@ -190,7 +190,7 @@ class FunctionStackFrame implements StackFrame {
 			return list.toArray(vars);
 		}
 		finally {
-			function.manager.lock.release();
+			function.manager.lock.releaseRead();
 		}
 	}
 
@@ -200,12 +200,12 @@ class FunctionStackFrame implements StackFrame {
 	 */
 	@Override
 	public int getFrameSize() {
-		function.manager.lock.acquire();
+		function.manager.lock.acquireRead();
 		try {
 			return getParameterSize() + getLocalSize();
 		}
 		finally {
-			function.manager.lock.release();
+			function.manager.lock.releaseRead();
 		}
 	}
 
@@ -215,7 +215,7 @@ class FunctionStackFrame implements StackFrame {
 	 */
 	@Override
 	public int getLocalSize() {
-		function.manager.lock.acquire();
+		function.manager.lock.acquireRead();
 		try {
 			checkIsValid();
 
@@ -254,7 +254,7 @@ class FunctionStackFrame implements StackFrame {
 			return -baseOffset;
 		}
 		finally {
-			function.manager.lock.release();
+			function.manager.lock.releaseRead();
 		}
 	}
 
@@ -279,7 +279,7 @@ class FunctionStackFrame implements StackFrame {
 
 	@Override
 	public int getParameterSize() {
-		function.manager.lock.acquire();
+		function.manager.lock.acquireRead();
 		try {
 			checkIsValid();
 
@@ -318,7 +318,7 @@ class FunctionStackFrame implements StackFrame {
 			return 0;
 		}
 		finally {
-			function.manager.lock.release();
+			function.manager.lock.releaseRead();
 		}
 	}
 
@@ -414,7 +414,7 @@ class FunctionStackFrame implements StackFrame {
 	 */
 	@Override
 	public Variable getVariableContaining(int offset) {
-		function.manager.lock.acquire();
+		function.manager.lock.acquireRead();
 		try {
 			checkIsValid();
 			Object key = Integer.valueOf(offset);
@@ -436,7 +436,7 @@ class FunctionStackFrame implements StackFrame {
 			return null;
 		}
 		finally {
-			function.manager.lock.release();
+			function.manager.lock.releaseRead();
 		}
 	}
 

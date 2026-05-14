@@ -50,7 +50,7 @@ public class AddressSetPropertyMapDB implements AddressSetPropertyMap {
 	public static AddressSetPropertyMapDB getPropertyMap(ProgramDB program, String mapName,
 			ErrorHandler errHandler, AddressMap addrMap, Lock lock) {
 
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			String tableName = AddressSetPropertyMapDB.TABLE_PREFIX + mapName;
 
@@ -60,7 +60,7 @@ public class AddressSetPropertyMapDB implements AddressSetPropertyMap {
 			}
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -188,12 +188,12 @@ public class AddressSetPropertyMapDB implements AddressSetPropertyMap {
 	@Override
 	public AddressSet getAddressSet() {
 		checkDeleted();
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return propertyMap.getAddressSet();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -203,7 +203,7 @@ public class AddressSetPropertyMapDB implements AddressSetPropertyMap {
 	@Override
 	public AddressIterator getAddresses() {
 		checkDeleted();
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (propertyMap.isEmpty()) {
 				return new EmptyAddressIterator();
@@ -212,7 +212,7 @@ public class AddressSetPropertyMapDB implements AddressSetPropertyMap {
 			return set.getAddresses(true);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -222,12 +222,12 @@ public class AddressSetPropertyMapDB implements AddressSetPropertyMap {
 	@Override
 	public AddressRangeIterator getAddressRanges() {
 		checkDeleted();
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return propertyMap.getAddressRanges();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -254,12 +254,12 @@ public class AddressSetPropertyMapDB implements AddressSetPropertyMap {
 	@Override
 	public boolean contains(Address addr) {
 		checkDeleted();
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return propertyMap.getValue(addr) != null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

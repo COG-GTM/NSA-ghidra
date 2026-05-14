@@ -235,19 +235,19 @@ class DataComponent extends DataDB {
 
 	@Override
 	public int getBytes(byte[] b, int off) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return parent.getBytes(b, this.offset + off);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public byte[] getBytes() throws MemoryAccessException {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			byte[] b = new byte[length];
@@ -257,19 +257,19 @@ class DataComponent extends DataDB {
 			return b;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public byte getByte(int n) throws MemoryAccessException {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return parent.getByte(this.offset + n);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

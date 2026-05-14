@@ -191,7 +191,7 @@ public abstract class MemorySymbol extends SymbolDB {
 
 	@Override
 	public int getReferenceCount() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			ReferenceManager rm = symbolMgr.getReferenceManager();
@@ -217,13 +217,13 @@ public abstract class MemorySymbol extends SymbolDB {
 			return count;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public boolean hasReferences() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			ReferenceManager rm = symbolMgr.getReferenceManager();
@@ -239,13 +239,13 @@ public abstract class MemorySymbol extends SymbolDB {
 			return false;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public Reference[] getReferences(TaskMonitor monitor) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (monitor == null) {
@@ -280,7 +280,7 @@ public abstract class MemorySymbol extends SymbolDB {
 			return list.toArray(refs);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -296,7 +296,7 @@ public abstract class MemorySymbol extends SymbolDB {
 	 * demangled or renamed.
 	 */
 	public final String getExternalOriginalImportedName() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (record == null) {
@@ -305,7 +305,7 @@ public abstract class MemorySymbol extends SymbolDB {
 			return record.getString(SymbolDatabaseAdapter.SYMBOL_ORIGINAL_IMPORTED_NAME_COL);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -362,7 +362,7 @@ public abstract class MemorySymbol extends SymbolDB {
 	 * @return external Program address or null if not external or unknown
 	 */
 	public final Address getExternalProgramAddress() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (record == null) {
@@ -379,7 +379,7 @@ public abstract class MemorySymbol extends SymbolDB {
 			return symbolMgr.getAddressMap().getAddressFactory().getAddress(addrStr);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

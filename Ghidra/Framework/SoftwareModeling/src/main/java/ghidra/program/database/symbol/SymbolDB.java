@@ -108,13 +108,13 @@ public abstract class SymbolDB extends DatabaseObject implements Symbol {
 
 	@Override
 	public Address getAddress() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return address;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -139,7 +139,7 @@ public abstract class SymbolDB extends DatabaseObject implements Symbol {
 			return name;
 		}
 
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			cachedName = doGetName();
@@ -147,7 +147,7 @@ public abstract class SymbolDB extends DatabaseObject implements Symbol {
 			return cachedName;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -178,7 +178,7 @@ public abstract class SymbolDB extends DatabaseObject implements Symbol {
 
 	@Override
 	public String getName(boolean includeNamespace) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			String symName = getName();
@@ -192,7 +192,7 @@ public abstract class SymbolDB extends DatabaseObject implements Symbol {
 			return symName;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -210,7 +210,7 @@ public abstract class SymbolDB extends DatabaseObject implements Symbol {
 
 	@Override
 	public String[] getPath() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			ArrayList<String> list = new ArrayList<>();
@@ -220,7 +220,7 @@ public abstract class SymbolDB extends DatabaseObject implements Symbol {
 			return path;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -274,7 +274,7 @@ public abstract class SymbolDB extends DatabaseObject implements Symbol {
 
 	@Override
 	public SourceType getSource() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (record == null) {
@@ -284,7 +284,7 @@ public abstract class SymbolDB extends DatabaseObject implements Symbol {
 			return SymbolDatabaseAdapter.decodeSourceTypeFromFlags(flags);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -530,7 +530,7 @@ public abstract class SymbolDB extends DatabaseObject implements Symbol {
 
 	@Override
 	public Symbol getParentSymbol() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (record == null) {
@@ -540,7 +540,7 @@ public abstract class SymbolDB extends DatabaseObject implements Symbol {
 					.getSymbol(record.getLongValue(SymbolDatabaseAdapter.SYMBOL_PARENT_ID_COL));
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -560,7 +560,7 @@ public abstract class SymbolDB extends DatabaseObject implements Symbol {
 
 	@Override
 	public boolean isGlobal() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (record == null) {
@@ -570,7 +570,7 @@ public abstract class SymbolDB extends DatabaseObject implements Symbol {
 				SymbolDatabaseAdapter.SYMBOL_PARENT_ID_COL) == Namespace.GLOBAL_NAMESPACE_ID;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

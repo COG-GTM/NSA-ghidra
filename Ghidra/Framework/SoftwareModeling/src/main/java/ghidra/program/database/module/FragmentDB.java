@@ -90,31 +90,31 @@ class FragmentDB extends DatabaseObject implements ProgramFragment {
 
 	@Override
 	public String getComment() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return record.getString(FragmentDBAdapter.FRAGMENT_COMMENTS_COL);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public String getName() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return record.getString(FragmentDBAdapter.FRAGMENT_NAME_COL);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public int getNumParents() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			Field[] keys =
@@ -125,7 +125,7 @@ class FragmentDB extends DatabaseObject implements ProgramFragment {
 			moduleMgr.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return 0;
 	}
@@ -211,85 +211,85 @@ class FragmentDB extends DatabaseObject implements ProgramFragment {
 
 	@Override
 	public boolean contains(Address start, Address end) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.contains(start, end);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public boolean contains(Address addr) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.contains(addr);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public boolean contains(AddressSetView rangeSet) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.contains(rangeSet);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public boolean hasSameAddresses(AddressSetView view) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.hasSameAddresses(view);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public AddressIterator getAddresses(boolean forward) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.getAddresses(forward);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public AddressIterator getAddresses(Address start, boolean forward) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.getAddresses(start, forward);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public AddressRangeIterator getAddressRanges() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.getAddressRanges();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -300,61 +300,61 @@ class FragmentDB extends DatabaseObject implements ProgramFragment {
 
 	@Override
 	public AddressRangeIterator getAddressRanges(boolean atStart) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.getAddressRanges(atStart);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public Address getMaxAddress() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.getMaxAddress();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public Address getMinAddress() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.getMinAddress();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public long getNumAddresses() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.getNumAddresses();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public int getNumAddressRanges() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.getNumAddressRanges();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -408,13 +408,13 @@ class FragmentDB extends DatabaseObject implements ProgramFragment {
 
 	@Override
 	public boolean isEmpty() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.isEmpty();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -474,85 +474,85 @@ class FragmentDB extends DatabaseObject implements ProgramFragment {
 
 	@Override
 	public AddressRangeIterator getAddressRanges(Address start, boolean forward) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.getAddressRanges(start, forward);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public AddressRange getFirstRange() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.getFirstRange();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public AddressRange getLastRange() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.getLastRange();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public AddressRange getRangeContaining(Address address) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.getRangeContaining(address);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public Iterator<AddressRange> iterator(boolean forward) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.iterator(forward);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public Iterator<AddressRange> iterator(Address start, boolean forward) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.iterator(start, forward);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public Address findFirstAddressInCommon(AddressSetView set) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return addrSet.findFirstAddressInCommon(set);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

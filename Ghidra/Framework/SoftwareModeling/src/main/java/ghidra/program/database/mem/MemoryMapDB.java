@@ -929,12 +929,12 @@ public class MemoryMapDB implements Memory, ManagerDB {
 
 	@Override
 	public MemoryBlock[] getBlocks() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return blocks.toArray(new MemoryBlock[blocks.size()]);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -2040,7 +2040,7 @@ public class MemoryMapDB implements Memory, ManagerDB {
 
 	@Override
 	public final String toString() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (blocks == null || blocks.isEmpty()) {
 				return "[empty]\n";
@@ -2056,30 +2056,30 @@ public class MemoryMapDB implements Memory, ManagerDB {
 			return buffer.toString();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public boolean equals(Object obj) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (obj instanceof Memory) {
 				return obj == this;
 			}
 			if (obj instanceof AddressSetView) {
-				lock.acquire();
+				lock.acquireRead();
 				try {
 					return allAddrSet.equals(obj);
 				}
 				finally {
-					lock.release();
+					lock.releaseRead();
 				}
 			}
 			return false;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

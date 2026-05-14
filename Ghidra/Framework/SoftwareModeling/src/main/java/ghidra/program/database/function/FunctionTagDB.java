@@ -94,25 +94,25 @@ public class FunctionTagDB extends DatabaseObject implements FunctionTag {
 
 	@Override
 	public String getComment() {
-		mgr.lock.acquire();
+		mgr.lock.acquireRead();
 		try {
 			checkIsValid();
 			return record.getString(FunctionTagAdapter.COMMENT_COL);
 		}
 		finally {
-			mgr.lock.release();
+			mgr.lock.releaseRead();
 		}
 	}
 
 	@Override
 	public String getName() {
-		mgr.lock.acquire();
+		mgr.lock.acquireRead();
 		try {
 			checkIsValid();
 			return record.getString(FunctionTagAdapter.NAME_COL);
 		}
 		finally {
-			mgr.lock.release();
+			mgr.lock.releaseRead();
 		}
 	}
 

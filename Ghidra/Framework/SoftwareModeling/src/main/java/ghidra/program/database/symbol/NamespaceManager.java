@@ -228,7 +228,7 @@ public class NamespaceManager implements ManagerDB {
 	 * @return a LongField function key iterator.
 	 */
 	public Iterator<Namespace> getNamespacesOverlapping(AddressSetView set) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			LinkedHashSet<Long> idSet = new LinkedHashSet<Long>();
 			AddressRangeIterator rangeIter = set.getAddressRanges();
@@ -262,7 +262,7 @@ public class NamespaceManager implements ManagerDB {
 		}
 		finally {
 			clearCache();
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -272,7 +272,7 @@ public class NamespaceManager implements ManagerDB {
 	 * @return body for the given namespace
 	 */
 	public AddressSetView getAddressSet(Namespace namespace) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (namespace == lastBodyNamespace) {
 				return lastBody;
@@ -295,17 +295,17 @@ public class NamespaceManager implements ManagerDB {
 			return set;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	private AddressSetView getAddressSet(long namespaceID) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return namespaceMap.getAddressSet(new LongField(namespaceID));
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

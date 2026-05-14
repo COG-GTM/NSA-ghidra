@@ -291,7 +291,7 @@ public abstract class ProgramBasedDataTypeManagerDB extends DataTypeManagerDB
 		if (instanceSettingsAdapter == null) {
 			throw new UnsupportedOperationException();
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			Address dataAddr = getDataSettingsAddress(data);
 			return instanceSettingsAdapter.getSettingsNames(addrMap.getKey(dataAddr, false));
@@ -300,7 +300,7 @@ public abstract class ProgramBasedDataTypeManagerDB extends DataTypeManagerDB
 			errHandler.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return new String[0];
 	}
@@ -310,7 +310,7 @@ public abstract class ProgramBasedDataTypeManagerDB extends DataTypeManagerDB
 		if (instanceSettingsAdapter == null) {
 			throw new UnsupportedOperationException();
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			Address dataAddr = getDataSettingsAddress(data);
 			return instanceSettingsAdapter
@@ -320,7 +320,7 @@ public abstract class ProgramBasedDataTypeManagerDB extends DataTypeManagerDB
 			errHandler.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return true;
 	}
@@ -379,7 +379,7 @@ public abstract class ProgramBasedDataTypeManagerDB extends DataTypeManagerDB
 	}
 
 	private SettingDB getSettingDB(Data data, String name) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (instanceSettingsAdapter == null) {
 				throw new UnsupportedOperationException();
@@ -401,7 +401,7 @@ public abstract class ProgramBasedDataTypeManagerDB extends DataTypeManagerDB
 			errHandler.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}

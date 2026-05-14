@@ -375,7 +375,7 @@ class UnionDB extends CompositeDB implements UnionInternal {
 
 	@Override
 	public boolean isPartOf(DataType dataType) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (equals(dataType)) {
@@ -395,19 +395,19 @@ class UnionDB extends CompositeDB implements UnionInternal {
 			return false;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public int getNumComponents() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return components.size();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -418,7 +418,7 @@ class UnionDB extends CompositeDB implements UnionInternal {
 
 	@Override
 	public DataTypeComponent getComponent(int ordinal) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (ordinal < 0 || ordinal >= components.size()) {
@@ -427,19 +427,19 @@ class UnionDB extends CompositeDB implements UnionInternal {
 			return components.get(ordinal);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public DataTypeComponentDB[] getComponents() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return components.toArray(new DataTypeComponentDB[components.size()]);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -475,7 +475,7 @@ class UnionDB extends CompositeDB implements UnionInternal {
 
 	@Override
 	public int getLength() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (unionLength == 0) {
@@ -484,7 +484,7 @@ class UnionDB extends CompositeDB implements UnionInternal {
 			return unionLength;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

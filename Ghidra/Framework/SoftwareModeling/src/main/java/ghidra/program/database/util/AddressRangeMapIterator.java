@@ -119,7 +119,7 @@ class AddressRangeMapIterator implements AddressRangeIterator {
 
 	@Override
 	public boolean hasNext() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (expectedModCount != rangeMap.getModCount()) {
 				throw new ConcurrentModificationException();
@@ -141,7 +141,7 @@ class AddressRangeMapIterator implements AddressRangeIterator {
 			return false;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

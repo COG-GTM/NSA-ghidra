@@ -107,13 +107,13 @@ class TypedefDB extends DataTypeDB implements TypeDef {
 	public boolean isAutoNamed() {
 		int flags = getFlags();
 		if (isInvalid()) {
-			lock.acquire();
+			lock.acquireRead();
 			try {
 				checkIsValid();
 				flags = getFlags();
 			}
 			finally {
-				lock.release();
+				lock.releaseRead();
 			}
 		}
 		return (flags & TypedefDBAdapter.TYPEDEF_FLAG_AUTONAME) != 0;
@@ -209,7 +209,7 @@ class TypedefDB extends DataTypeDB implements TypeDef {
 
 	@Override
 	public DataType getBaseDataType() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			DataType dataType = getDataType();
@@ -219,13 +219,13 @@ class TypedefDB extends DataTypeDB implements TypeDef {
 			return dataType;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public DataType getDataType() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			long dataTypeID = record.getLongValue(TypedefDBAdapter.TYPEDEF_DT_ID_COL);
@@ -236,7 +236,7 @@ class TypedefDB extends DataTypeDB implements TypeDef {
 			return dt;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -387,7 +387,7 @@ class TypedefDB extends DataTypeDB implements TypeDef {
 
 	@Override
 	public SettingsDefinition[] getSettingsDefinitions() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (settingsDef == null) {
@@ -405,7 +405,7 @@ class TypedefDB extends DataTypeDB implements TypeDef {
 			return settingsDef;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -638,7 +638,7 @@ class TypedefDB extends DataTypeDB implements TypeDef {
 	}
 
 	boolean updateAutoName(boolean notify) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 
@@ -664,7 +664,7 @@ class TypedefDB extends DataTypeDB implements TypeDef {
 			dataMgr.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return true;
 	}

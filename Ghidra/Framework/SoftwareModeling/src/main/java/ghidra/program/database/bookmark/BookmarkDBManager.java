@@ -271,7 +271,7 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 
 	@Override
 	public BookmarkType[] getBookmarkTypes() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			Collection<BookmarkType> c = typesByName.values();
 			BookmarkTypeDB[] bmTypes = new BookmarkTypeDB[c.size()];
@@ -279,7 +279,7 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 			return bmTypes;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -333,7 +333,7 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 
 	@Override
 	public Bookmark getBookmark(Address addr, String type, String category) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			BookmarkTypeDB bmt = getBookmarkType(type, false);
 			if (bmt != null && bmt.hasBookmarks() && category != null) {
@@ -353,7 +353,7 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 			dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -468,7 +468,7 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 
 	@Override
 	public Bookmark[] getBookmarks(Address addr) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			int n = typesArray.getLastNonEmptyIndex();
 			List<Bookmark> list = new ArrayList<>();
@@ -483,7 +483,7 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 			return bookmarks;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -506,7 +506,7 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 
 	@Override
 	public Bookmark[] getBookmarks(Address address, String type) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			Bookmark[] bookmarks = null;
 			List<Bookmark> list = new ArrayList<>();
@@ -519,13 +519,13 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 			return bookmarks;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public boolean hasBookmarks(String type) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			BookmarkType bmt = getBookmarkType(type);
 			if (bmt == null) {
@@ -534,13 +534,13 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 			return bmt.hasBookmarks();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public String[] getCategories(String type) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			BookmarkType bmt = getBookmarkType(type);
 			if (bmt == null || !bmt.hasBookmarks()) {
@@ -555,13 +555,13 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public AddressSetView getBookmarkAddresses(String type) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			BookmarkType bmt = getBookmarkType(type);
 			if (bmt == null || !bmt.hasBookmarks()) {
@@ -576,7 +576,7 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -619,7 +619,7 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 
 	@Override
 	public Bookmark getBookmark(long id) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			BookmarkDB bm = cache.get(id);
 			if (bm == null) {
@@ -638,25 +638,25 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 			program.dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
 
 	@Override
 	public int getBookmarkCount() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return bookmarkAdapter.getBookmarkCount();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public int getBookmarkCount(String type) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			BookmarkType bmt = getBookmarkType(type);
 			if (bmt == null) {
@@ -665,7 +665,7 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 			return bookmarkAdapter.getBookmarkCount(bmt.getTypeId());
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -694,12 +694,12 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 
 	@Override
 	public Iterator<Bookmark> getBookmarksIterator() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return new TotalIterator();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -841,7 +841,7 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 		}
 
 		private void findNext() {
-			lock.acquire();
+			lock.acquireRead();
 			try {
 				while (nextBookmark == null && (forward ? it.hasNext() : it.hasPrevious())) {
 					DBRecord record = forward ? it.next() : it.previous();
@@ -852,7 +852,7 @@ public class BookmarkDBManager implements BookmarkManager, ErrorHandler, Manager
 				// do nothing; the nextBookmark will not be set and we will return false for hasNext()
 			}
 			finally {
-				lock.release();
+				lock.releaseRead();
 			}
 		}
 

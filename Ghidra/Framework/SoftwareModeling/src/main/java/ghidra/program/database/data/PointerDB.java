@@ -85,13 +85,13 @@ class PointerDB extends DataTypeDB implements Pointer {
 
 	@Override
 	public DataType getDataType() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return dataMgr.getDataType(record.getLongValue(PointerDBAdapter.PTR_DT_ID_COL));
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -142,7 +142,7 @@ class PointerDB extends DataTypeDB implements Pointer {
 		if (localDisplayName != null && !isInvalid()) {
 			return localDisplayName;
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			if (displayName == null) {
@@ -161,13 +161,13 @@ class PointerDB extends DataTypeDB implements Pointer {
 			return displayName;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public String getMnemonic(Settings settings) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			DataType dataType = getDataType();
@@ -177,25 +177,25 @@ class PointerDB extends DataTypeDB implements Pointer {
 			return dataType.getMnemonic(settings) + " *";
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public boolean hasLanguageDependantLength() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return record.getByteValue(PointerDBAdapter.PTR_LENGTH_COL) <= 0;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public int getLength() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			int len = record.getByteValue(PointerDBAdapter.PTR_LENGTH_COL);
@@ -205,7 +205,7 @@ class PointerDB extends DataTypeDB implements Pointer {
 			return len;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -217,7 +217,7 @@ class PointerDB extends DataTypeDB implements Pointer {
 
 	@Override
 	public String getDescription() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			StringBuffer sbuf = new StringBuffer();
@@ -239,13 +239,13 @@ class PointerDB extends DataTypeDB implements Pointer {
 			return sbuf.toString();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public Object getValue(MemBuffer buf, Settings settings, int length) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 			return PointerDataType.getAddressValue(buf, getLength(), settings);
@@ -254,7 +254,7 @@ class PointerDB extends DataTypeDB implements Pointer {
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -270,7 +270,7 @@ class PointerDB extends DataTypeDB implements Pointer {
 
 	@Override
 	public String getRepresentation(MemBuffer buf, Settings settings, int length) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			checkIsValid();
 
@@ -281,7 +281,7 @@ class PointerDB extends DataTypeDB implements Pointer {
 			return addr.toString();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

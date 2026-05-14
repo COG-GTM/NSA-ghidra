@@ -469,7 +469,7 @@ public class FunctionManagerDB implements FunctionManager {
 	 */
 	@Override
 	public Function getFunction(long key) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			lastFuncID = key;
 			FunctionDB func = cache.get(key);
@@ -487,7 +487,7 @@ public class FunctionManagerDB implements FunctionManager {
 			return func;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -507,7 +507,7 @@ public class FunctionManagerDB implements FunctionManager {
 
 	@Override
 	public Function getFunctionAt(Address entryPoint) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (lastFuncID != -1) {
 				FunctionDB function = cache.get(lastFuncID);
@@ -521,7 +521,7 @@ public class FunctionManagerDB implements FunctionManager {
 			}
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return null;
 	}
@@ -533,7 +533,7 @@ public class FunctionManagerDB implements FunctionManager {
 			return getFunctionAt(addr);
 		}
 
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			if (lastFuncID != -1) {
 				FunctionDB func = cache.get(lastFuncID);
@@ -552,7 +552,7 @@ public class FunctionManagerDB implements FunctionManager {
 			return getFunction(symbol.getID());
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -1106,7 +1106,7 @@ public class FunctionManagerDB implements FunctionManager {
 
 		// TODO: Add caching !!!
 
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			Function func = getFunctionContaining(instrAddr);
 			if (func == null) {
@@ -1193,7 +1193,7 @@ public class FunctionManagerDB implements FunctionManager {
 			return bestVar;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -1231,7 +1231,7 @@ public class FunctionManagerDB implements FunctionManager {
 	}
 
 	public boolean isThunk(long key) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			FunctionDB function = cache.get(key);
 			if (function != null) {
@@ -1246,12 +1246,12 @@ public class FunctionManagerDB implements FunctionManager {
 			return false;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	public long getThunkedFunctionId(long functionId) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			FunctionDB function = cache.get(functionId);
 			if (function != null) {
@@ -1269,7 +1269,7 @@ public class FunctionManagerDB implements FunctionManager {
 			return -1;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -1279,7 +1279,7 @@ public class FunctionManagerDB implements FunctionManager {
 	 * @return list of thunk function IDs or null
 	 */
 	public List<Long> getThunkFunctionIds(long referencedFunctionId) {
-		lock.acquire();
+		lock.acquireRead();
 		List<Long> list = null;
 		try {
 			RecordIterator records = thunkAdapter.iterateThunkRecords(referencedFunctionId);
@@ -1295,7 +1295,7 @@ public class FunctionManagerDB implements FunctionManager {
 			dbError(e);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 		return list;
 	}

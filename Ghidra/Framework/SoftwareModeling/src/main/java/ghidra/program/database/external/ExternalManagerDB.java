@@ -563,7 +563,7 @@ public class ExternalManagerDB implements ManagerDB, ExternalManager {
 		if (externalAddr.getAddressSpace() != AddressSpace.EXTERNAL_SPACE) {
 			throw new IllegalArgumentException("Expected external address");
 		}
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			Symbol[] symbols = symbolMgr.getSymbols(externalAddr);
 			if (symbols.length == 1) {
@@ -577,7 +577,7 @@ public class ExternalManagerDB implements ManagerDB, ExternalManager {
 			return null;
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 

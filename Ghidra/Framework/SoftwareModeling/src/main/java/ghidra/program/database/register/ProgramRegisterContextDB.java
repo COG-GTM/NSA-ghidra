@@ -416,80 +416,80 @@ public class ProgramRegisterContextDB extends AbstractStoredProgramContext imple
 
 	@Override
 	public AddressRangeIterator getRegisterValueAddressRanges(Register register) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return super.getRegisterValueAddressRanges(register);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public AddressRange getRegisterValueRangeContaining(Register register, Address addr) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return super.getRegisterValueRangeContaining(register, addr);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public AddressRangeIterator getRegisterValueAddressRanges(Register register, Address start,
 			Address end) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return super.getRegisterValueAddressRanges(register, start, end);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public AddressRangeIterator getDefaultRegisterValueAddressRanges(Register register) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return super.getDefaultRegisterValueAddressRanges(register);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public AddressRangeIterator getDefaultRegisterValueAddressRanges(Register register,
 			Address start, Address end) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return super.getDefaultRegisterValueAddressRanges(register, start, end);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public Register[] getRegistersWithValues() {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return super.getRegistersWithValues();
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public boolean hasValueOverRange(Register reg, BigInteger value, AddressSetView addrSet) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return super.hasValueOverRange(reg, value, addrSet);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
@@ -506,23 +506,23 @@ public class ProgramRegisterContextDB extends AbstractStoredProgramContext imple
 
 	@Override
 	public RegisterValue getDefaultValue(Register register, Address address) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return super.getDefaultValue(register, address);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
 	@Override
 	public RegisterValue getNonDefaultValue(Register register, Address address) {
-		lock.acquire();
+		lock.acquireRead();
 		try {
 			return super.getNonDefaultValue(register, address);
 		}
 		finally {
-			lock.release();
+			lock.releaseRead();
 		}
 	}
 
