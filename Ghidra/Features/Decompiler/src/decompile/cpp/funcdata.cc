@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #include "funcdata.hh"
+#include <memory>
 
 namespace ghidra {
 
@@ -63,9 +64,13 @@ Funcdata::Funcdata(const string &nm,const string &disp,Scope *scope,const Addres
       id = 0x57AB12CD;
       id = (id << 32) | (addr.getOffset() & 0xffffffff);
     }
-    ScopeLocal *newMap = new ScopeLocal(id,stackid,this,glb);
-    glb->symboltab->attachScope(newMap,scope);		// This may throw and delete newMap
-    localmap = newMap;
+    // Wrap the freshly allocated ScopeLocal in a unique_ptr so that any
+    // exception from attachScope() reclaims it automatically; ownership is
+    // only released into the raw localmap pointer once attachScope() has
+    // succeeded (at which point Database owns the Scope).
+    auto newMap = std::unique_ptr<ScopeLocal>(new ScopeLocal(id,stackid,this,glb));
+    glb->symboltab->attachScope(newMap.get(),scope);
+    localmap = newMap.release();
     funcp.setScope(localmap,baseaddr+ -1);
     localmap->resetLocalWindow();
   }
@@ -191,7 +196,18 @@ Funcdata::~Funcdata(void)
 
 {
   //  clear();
-  if (localmap != (ScopeLocal *)0)
+  // Skip the deleteScope() callback during Architecture teardown.  The
+  // Architecture owns the symbol table via std::unique_ptr<Database>; when
+  // \c symboltab.reset() runs, the unique_ptr's stored pointer is cleared
+  // \b before the deleter is invoked, so \c glb->symboltab.get() returns
+  // nullptr for the duration of \c ~Database.  Calling deleteScope() on a
+  // null pointer would crash; conveniently, the ScopeLocal we'd ask to
+  // remove is being destroyed by that same Database destructor as it walks
+  // its scope map.  In the normal lifecycle (Funcdata destroyed before the
+  // Architecture is torn down), symboltab is still live and the callback
+  // proceeds as before.
+  if (localmap != (ScopeLocal *)0 &&
+      glb != (Architecture *)0 && glb->symboltab.get() != (Database *)0)
     glb->symboltab->deleteScope(localmap);
 
   clearCallSpecs();
@@ -804,19 +820,21 @@ uint8 Funcdata::decode(Decoder &decoder)
     if (subId == ELEM_LOCALDB) {
       if (localmap != (ScopeLocal *)0)
 	throw LowlevelError("Pre-existing local scope when restoring: "+name);
-      ScopeLocal *newMap = new ScopeLocal(id,stackid,this,glb);
-      glb->symboltab->decodeScope(decoder,newMap);	// May delete newMap and throw
-      localmap = newMap;
+      // unique_ptr guard: if decodeScope throws (or otherwise fails to take
+      // ownership), the new ScopeLocal is destroyed automatically.
+      auto newMap = std::unique_ptr<ScopeLocal>(new ScopeLocal(id,stackid,this,glb));
+      glb->symboltab->decodeScope(decoder,newMap.get());
+      localmap = newMap.release();
     }
     else if (subId == ELEM_OVERRIDE)
       localoverride.decode(decoder,glb);
     else if (subId == ELEM_PROTOTYPE) {
       if (localmap == (ScopeLocal *)0) {
 	// If we haven't seen a <localdb> tag yet, assume we have a default local scope
-	ScopeLocal *newMap = new ScopeLocal(id,stackid,this,glb);
+	auto newMap = std::unique_ptr<ScopeLocal>(new ScopeLocal(id,stackid,this,glb));
 	Scope *scope = glb->symboltab->getGlobalScope();
-	glb->symboltab->attachScope(newMap,scope);	// May delete newMap and throw
-	localmap = newMap;
+	glb->symboltab->attachScope(newMap.get(),scope);
+	localmap = newMap.release();
       }
       funcp.setScope(localmap,baseaddr+ -1); // localmap built earlier
       funcp.decode(decoder,glb);
@@ -827,10 +845,10 @@ uint8 Funcdata::decode(Decoder &decoder)
   decoder.closeElement(elemId);
   if (localmap == (ScopeLocal *)0) { // Seen neither <localdb> or <prototype>
     // This is a function shell, so we provide default locals
-    ScopeLocal *newMap = new ScopeLocal(id,stackid,this,glb);
+    auto newMap = std::unique_ptr<ScopeLocal>(new ScopeLocal(id,stackid,this,glb));
     Scope *scope = glb->symboltab->getGlobalScope();
-    glb->symboltab->attachScope(newMap,scope);		// May delete newMap and throw
-    localmap = newMap;
+    glb->symboltab->attachScope(newMap.get(),scope);
+    localmap = newMap.release();
     funcp.setScope(localmap,baseaddr+ -1);
   }
   localmap->resetLocalWindow();
@@ -981,7 +999,7 @@ void Funcdata::forceFacingType(Datatype *parent,int4 fieldNum,PcodeOp *op,int4 s
     // Don't associate a relative pointer with the resolution, but convert to a standard pointer
     parent = glb->types->getTypePointer(parent->getSize(), baseType, ((TypePointer *)parent)->getWordSize());
   }
-  ResolvedUnion resolve(parent,fieldNum,*glb->types);
+  ResolvedUnion resolve(parent,fieldNum,*glb->types.get());
   setUnionField(parent, op, slot, resolve);
 }
 

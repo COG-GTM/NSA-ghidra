@@ -22,6 +22,7 @@
 #include "string_ghidra.hh"
 #include "cpool_ghidra.hh"
 #include "inject_ghidra.hh"
+#include <memory>
 
 namespace ghidra {
 
@@ -291,7 +292,7 @@ void ArchitectureGhidra::postSpecFile(void)
 void ArchitectureGhidra::buildLoader(DocumentStorage &store)
 
 {
-  loader = new LoadImageGhidra(this);
+  loader.reset(new LoadImageGhidra(this));
 }
 
 PcodeInjectLibrary *ArchitectureGhidra::buildPcodeInjectLibrary(void)
@@ -309,16 +310,18 @@ Translate *ArchitectureGhidra::buildTranslator(DocumentStorage &store)
 Scope *ArchitectureGhidra::buildDatabase(DocumentStorage &store)
 
 {
-  symboltab = new Database(this,false);
-  Scope *globalscope = new ScopeGhidra(this);
-  symboltab->attachScope(globalscope,(Scope *)0);
-  return globalscope;
+  symboltab.reset(new Database(this,false));
+  // unique_ptr guard for the freshly allocated global scope; released into
+  // the symbol table only after attachScope() returns successfully.
+  std::unique_ptr<Scope> globalscope(new ScopeGhidra(this));
+  symboltab->attachScope(globalscope.get(),(Scope *)0);
+  return globalscope.release();
 }
 
 void ArchitectureGhidra::buildTypegrp(DocumentStorage &store)
 
 {
-  types = new TypeFactoryGhidra(this);
+  types.reset(new TypeFactoryGhidra(this));
 }
 
 void ArchitectureGhidra::buildCoreTypes(DocumentStorage &store)
@@ -359,25 +362,25 @@ void ArchitectureGhidra::buildCoreTypes(DocumentStorage &store)
 void ArchitectureGhidra::buildCommentDB(DocumentStorage &store)
 
 {
-  commentdb = new CommentDatabaseGhidra(this);
+  commentdb.reset(new CommentDatabaseGhidra(this));
 }
 
 void ArchitectureGhidra::buildStringManager(DocumentStorage &store)
 
 {
-  stringManager = new GhidraStringManager(this,2048);
+  stringManager.reset(new GhidraStringManager(this,2048));
 }
 
 void ArchitectureGhidra::buildConstantPool(DocumentStorage &store)
 
 {
-  cpool = new ConstantPoolGhidra(this);
+  cpool.reset(new ConstantPoolGhidra(this));
 }
 
 void ArchitectureGhidra::buildContext(DocumentStorage &store)
 
 {
-  context = new ContextGhidra(this);
+  context.reset(new ContextGhidra(this));
 }
 
 void ArchitectureGhidra::buildSymbols(DocumentStorage &store)

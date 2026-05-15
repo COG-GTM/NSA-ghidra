@@ -62,7 +62,7 @@ void RawBinaryArchitecture::buildLoader(DocumentStorage &store)
   ldr->open();
   if (adjustvma != 0)
     ldr->adjustVma(adjustvma);
-  loader = ldr;
+  loader.reset(ldr);
 }
 
 void RawBinaryArchitecture::resolveArchitecture(void)
@@ -76,7 +76,7 @@ void RawBinaryArchitecture::postSpecFile(void)
 
 {
   Architecture::postSpecFile();
-  ((RawLoadImage *)loader)->attachToSpace(getDefaultCodeSpace());	 // Attach default space to loader
+  ((RawLoadImage *)loader.get())->attachToSpace(getDefaultCodeSpace());	 // Attach default space to loader
 }
 
 RawBinaryArchitecture::RawBinaryArchitecture(const string &fname,const string &targ,ostream *estream)

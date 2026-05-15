@@ -33,6 +33,7 @@
 #include "options.hh"
 #include "transform.hh"
 #include "prefersplit.hh"
+#include <memory>
 
 namespace ghidra {
 
@@ -187,24 +188,32 @@ public:
   uint4 split_datatype_config;	///< Toggle for data-types splitting: Bit 0=structs, 1=arrays, 2=pointers
   vector<Rule *> extra_pool_rules; ///< Extra rules that go in the main pool (cpu specific, experimental)
 
-  Database *symboltab;		///< Memory map of global variables and functions
-  ContextDatabase *context;	///< Map from addresses to context settings
+  // Owned scalar sub-components.  These were raw pointers; converting them
+  // to std::unique_ptr means that even if Architecture::init() throws partway
+  // through buildLoader/buildTypegrp/etc., everything constructed up to that
+  // point is automatically destroyed.  Read access via operator-> is
+  // unchanged: existing code using \c arch->symboltab->foo() compiles the
+  // same way against a unique_ptr.  Assignment sites (\c symboltab = new
+  // Database(...)) must use \c .reset() / std::move; those are updated in
+  // architecture.cc and its subclasses.
+  std::unique_ptr<Database> symboltab;		///< Memory map of global variables and functions
+  std::unique_ptr<ContextDatabase> context;	///< Map from addresses to context settings
   map<string,ProtoModel *> protoModels; ///< Parsed forms of possible prototypes
-  ProtoModel *defaultfp;	///< Parsed form of default prototype
+  ProtoModel *defaultfp;	///< Parsed form of default prototype (non-owning; lives in protoModels)
   VarnodeData defaultReturnAddr;	///< Default storage location of return address (for current function)
   ProtoModel *evalfp_current;	///< Function proto to use when evaluating current function
   ProtoModel *evalfp_called;	///< Function proto to use when evaluating called functions
-  TypeFactory *types;		///< List of types for this binary
-  const Translate *translate;	///< Translation method for this binary
-  LoadImage *loader;		///< Method for loading portions of binary
-  PcodeInjectLibrary *pcodeinjectlib;	///< Pcode injection manager
+  std::unique_ptr<TypeFactory> types;		///< List of types for this binary
+  std::unique_ptr<const Translate> translate;	///< Translation method for this binary
+  std::unique_ptr<LoadImage> loader;		///< Method for loading portions of binary
+  std::unique_ptr<PcodeInjectLibrary> pcodeinjectlib;	///< Pcode injection manager
   RangeList nohighptr;          ///< Ranges for which high-level pointers are not possible
-  CommentDatabase *commentdb;	///< Comments for this architecture
-  StringManager *stringManager;	///< Manager of decoded strings
-  ConstantPool *cpool;		///< Deferred constant values
-  PrintLanguage *print;	        ///< Current high-level language printer
+  std::unique_ptr<CommentDatabase> commentdb;	///< Comments for this architecture
+  std::unique_ptr<StringManager> stringManager;	///< Manager of decoded strings
+  std::unique_ptr<ConstantPool> cpool;		///< Deferred constant values
+  PrintLanguage *print;	        ///< Current high-level language printer (non-owning; lives in printlist)
   vector<PrintLanguage *> printlist;	///< List of high-level language printers supported
-  OptionDatabase *options;	///< Options that can be configured
+  std::unique_ptr<OptionDatabase> options;	///< Options that can be configured
   vector<TypeOp *> inst;	///< Registered p-code instructions
   UserOpManage userops;		///< Specifically registered user-defined p-code ops
   vector<PreferSplitRecord> splitrecords; ///< registers that we would prefer to see split for this processor

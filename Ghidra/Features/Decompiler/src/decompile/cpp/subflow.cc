@@ -2702,7 +2702,7 @@ SplitDatatype::SplitDatatype(Funcdata &func)
   : data(func)
 {
   Architecture *glb = func.getArch();
-  types = glb->types;
+  types = glb->types.get();
   splitStructures = (glb->split_datatype_config & OptionSplitDatatypes::option_struct) != 0;
   splitArrays = (glb->split_datatype_config & OptionSplitDatatypes::option_array) != 0;
   isLoadStore = false;
@@ -2814,7 +2814,7 @@ bool SplitDatatype::splitStore(PcodeOp *storeOp,Datatype *outType)
   Datatype *inType = (Datatype *)0;
   if (inVn->isWritten() && inVn->getDef()->code() == CPUI_LOAD && inVn->loneDescend() == storeOp) {
     loadOp = inVn->getDef();
-    inType = getValueDatatype(loadOp, inVn->getSize(), data.getArch()->types);
+    inType = getValueDatatype(loadOp, inVn->getSize(), data.getArch()->types.get());
     if (inType == (Datatype *)0)
       loadOp = (PcodeOp *)0;
   }
@@ -2970,7 +2970,7 @@ void RuleSplitLoad::getOpList(vector<uint4> &oplist) const
 int4 RuleSplitLoad::applyOp(PcodeOp *op,Funcdata &data)
 
 {
-  Datatype *inType = SplitDatatype::getValueDatatype(op, op->getOut()->getSize(), data.getArch()->types);
+  Datatype *inType = SplitDatatype::getValueDatatype(op, op->getOut()->getSize(), data.getArch()->types.get());
   if (inType == (Datatype *)0)
     return 0;
   type_metatype metain = inType->getMetatype();
@@ -2991,7 +2991,7 @@ void RuleSplitStore::getOpList(vector<uint4> &oplist) const
 int4 RuleSplitStore::applyOp(PcodeOp *op,Funcdata &data)
 
 {
-  Datatype *outType = SplitDatatype::getValueDatatype(op, op->getIn(2)->getSize(), data.getArch()->types);
+  Datatype *outType = SplitDatatype::getValueDatatype(op, op->getIn(2)->getSize(), data.getArch()->types.get());
   if (outType == (Datatype *)0)
     return 0;
   type_metatype metain = outType->getMetatype();

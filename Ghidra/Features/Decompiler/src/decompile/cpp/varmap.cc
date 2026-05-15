@@ -1126,7 +1126,7 @@ void MapState::gatherVarnodes(const Funcdata &fd)
 {
   VarnodeLocSet::const_iterator riter,iterend;
   Varnode *vn;
-  TypeFactory *types = fd.getArch()->types;
+  TypeFactory *types = fd.getArch()->types.get();
   riter = fd.beginLoc(spaceid);
   iterend = fd.endLoc(spaceid);
   while(riter != iterend) {
@@ -1238,7 +1238,7 @@ void MapState::gatherOpen(const Funcdata &fd)
     addRange(offset,ct,0,RangeHint::open,minItems);
   }
 
-  TypeFactory *typeFactory = fd.getArch()->types;
+  TypeFactory *typeFactory = fd.getArch()->types.get();
   const list<LoadGuard> &loadGuard( fd.getLoadGuards() );
   for(list<LoadGuard>::const_iterator giter=loadGuard.begin();giter!=loadGuard.end();++giter)
     addGuard(*giter,CPUI_LOAD,typeFactory);
@@ -1306,7 +1306,7 @@ bool ScopeLocal::restructure(MapState &state)
   while(state.getNext()) {
     next = state.next();
     if (next->sstart < cur.sstart+cur.size) {	// Do the ranges intersect
-      if (cur.merge(next,space,glb->types))	// Union them
+      if (cur.merge(next,space,glb->types.get()))	// Union them
 	overlapProblems = true;
     }
     else {

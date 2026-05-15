@@ -16,4 +16,14 @@ ghi_dbg
 ghi_opt
 sla_dbg
 sla_opt
+sleigh_opt
+sleigh_dbg
+
+# Sanitizer / Valgrind targets (built via Makefile.sanitize)
+test_memoryleak_asan
+test_memoryleak_valgrind
+san_asan/
+san_vg/
+leak_reports/
+
 
