@@ -75,7 +75,7 @@ void XmlArchitecture::buildLoader(DocumentStorage &store)
   }
   if (el == (const Element *)0)
     throw LowlevelError("Could not find binaryimage tag");
-  loader = new LoadImageXml(getFilename(),el);
+  loader.reset(new LoadImageXml(getFilename(),el));
 }
 
 /// Read in image information (which uses translator)
@@ -83,7 +83,8 @@ void XmlArchitecture::postSpecFile(void)
 
 {
   Architecture::postSpecFile();
-  ((LoadImageXml *)loader)->open(translate);
+  // loader and translate are std::unique_ptr; pass the raw pointer to open().
+  ((LoadImageXml *)loader.get())->open(translate.get());
   if (adjustvma != 0)
     loader->adjustVma(adjustvma);
 }
@@ -107,7 +108,7 @@ void XmlArchitecture::encode(Encoder &encoder) const
   encoder.openElement(ELEM_XML_SAVEFILE);
   encodeHeader(encoder);
   encoder.writeUnsignedInteger(ATTRIB_ADJUSTVMA, adjustvma);
-  ((LoadImageXml *)loader)->encode(encoder); // Save the LoadImage
+  ((LoadImageXml *)loader.get())->encode(encoder); // Save the LoadImage
   types->encodeCoreTypes(encoder);
   SleighArchitecture::encode(encoder); // Save the rest of the state
   encoder.closeElement(ELEM_XML_SAVEFILE);

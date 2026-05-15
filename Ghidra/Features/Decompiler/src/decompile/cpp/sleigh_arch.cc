@@ -152,7 +152,15 @@ void SleighArchitecture::loadLanguageDescription(const string &specfile,ostream 
 SleighArchitecture::~SleighArchitecture(void)
 
 {
-  translate = (const Translate *)0;
+  // The base Architecture's \c translate is a std::unique_ptr<const Translate>
+  // that normally owns its pointee.  In SleighArchitecture, however, the
+  // translator lives inside the \c translators map (which owns it by value),
+  // and \c translate merely points into that map.  Release ownership from
+  // the unique_ptr so the base Architecture destructor's reset() doesn't
+  // double-destroy the Sleigh object: the translator is destroyed when the
+  // \c translators map itself is destroyed (which happens implicitly after
+  // this body runs, as part of SleighArchitecture's member teardown).
+  (void)translate.release();
 }
 
 string SleighArchitecture::getDescription(void) const
@@ -178,11 +186,13 @@ Translate *SleighArchitecture::buildTranslator(DocumentStorage &store)
 
   iter = translators.find(languageindex);
   if (iter != translators.end()) {
-    iter->second.reset(loader, context);
+    // Sleigh::reset takes raw pointers; loader/context are now unique_ptrs
+    // owned by Architecture, so pass the underlying raw pointers via .get().
+    iter->second.reset(loader.get(), context.get());
     return &iter->second;
   }
   pair<map<int4,Sleigh>::iterator,bool> res;
-  res = translators.emplace(piecewise_construct,forward_as_tuple(languageindex),forward_as_tuple(loader,context));
+  res = translators.emplace(piecewise_construct,forward_as_tuple(languageindex),forward_as_tuple(loader.get(),context.get()));
   return &(*res.first).second;
 }
 
@@ -198,7 +208,7 @@ PcodeInjectLibrary *SleighArchitecture::buildPcodeInjectLibrary(void)
 void SleighArchitecture::buildTypegrp(DocumentStorage &store)
 
 {
-  types = new TypeFactory(this); // Initialize the object
+  types.reset(new TypeFactory(this)); // Initialize the object
 }
 
 void SleighArchitecture::buildCoreTypes(DocumentStorage &store)
@@ -241,25 +251,25 @@ void SleighArchitecture::buildCoreTypes(DocumentStorage &store)
 void SleighArchitecture::buildCommentDB(DocumentStorage &store)
 
 {
-  commentdb = new CommentDatabaseInternal();
+  commentdb.reset(new CommentDatabaseInternal());
 }
 
 void SleighArchitecture::buildStringManager(DocumentStorage &store)
 
 {
-  stringManager = new StringManagerUnicode(this,2048);
+  stringManager.reset(new StringManagerUnicode(this,2048));
 }
 
 void SleighArchitecture::buildConstantPool(DocumentStorage &store)
 
 {
-  cpool = new ConstantPoolInternal();
+  cpool.reset(new ConstantPoolInternal());
 }
 
 void SleighArchitecture::buildContext(DocumentStorage &store)
 
 {
-  context = new ContextInternal();
+  context.reset(new ContextInternal());
 }
 
 void SleighArchitecture::buildSymbols(DocumentStorage &store)

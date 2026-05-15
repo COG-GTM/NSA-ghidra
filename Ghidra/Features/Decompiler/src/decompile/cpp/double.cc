@@ -570,7 +570,7 @@ void SplitVarnode::createJoinedWhole(Funcdata &data)
   if (whole != (Varnode *)0) return;
   Address newaddr;
   if (!isAddrTiedContiguous(lo,hi,newaddr)) {
-    newaddr = data.getArch()->constructJoinAddress(data.getArch()->translate,hi->getAddr(),hi->getSize(),
+    newaddr = data.getArch()->constructJoinAddress(data.getArch()->translate.get(),hi->getAddr(),hi->getSize(),
 									    lo->getAddr(),lo->getSize());
   }
   whole = data.newVarnode(wholesize,newaddr);

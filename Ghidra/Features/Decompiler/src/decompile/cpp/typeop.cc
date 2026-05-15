@@ -2420,7 +2420,7 @@ Datatype *TypeOpSegment::propagateType(Datatype *alttype,PcodeOp *op,Varnode *in
 TypeOpCpoolref::TypeOpCpoolref(TypeFactory *t) : TypeOp(t,CPUI_CPOOLREF,"cpoolref")
 
 {
-  cpool = t->getArch()->cpool;
+  cpool = t->getArch()->cpool.get();
   opflags = PcodeOp::special | PcodeOp::nocollapse;
   behave = new OpBehavior(CPUI_CPOOLREF,false,true); // Dummy behavior
 }

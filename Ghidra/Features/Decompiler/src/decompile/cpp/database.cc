@@ -17,6 +17,7 @@
 #include "funcdata.hh"
 #include "crc32.hh"
 #include <ctype.h>
+#include <memory>
 
 namespace ghidra {
 
@@ -514,7 +515,7 @@ int4 Symbol::getBytesConsumed(void) const
 void FunctionSymbol::buildType(void)
 
 {
-  TypeFactory *types = scope->getArch()->types;
+  TypeFactory *types = scope->getArch()->types.get();
   type = types->getTypeCode();
   flags |= Varnode::namelock | Varnode::typelock;
 }
@@ -677,7 +678,7 @@ void EquateSymbol::decode(Decoder &decoder)
   value = decoder.readUnsignedInteger(ATTRIB_CONTENT);
   decoder.closeElement(subId);
 
-  TypeFactory *types = scope->getArch()->types;
+  TypeFactory *types = scope->getArch()->types.get();
   type = types->getBase(1,TYPE_UNKNOWN);
   decoder.closeElement(elemId);
 }
@@ -768,7 +769,7 @@ void LabSymbol::decode(Decoder &decoder)
 void ExternRefSymbol::buildNameType(void)
 
 {
-  TypeFactory *typegrp = scope->getArch()->types;
+  TypeFactory *typegrp = scope->getArch()->types.get();
   type = typegrp->getTypeCode();
   type = typegrp->getTypePointer(refaddr.getAddrSize(),type,refaddr.getSpace()->getWordSize());
   if (name.size() == 0) {	// If a name was not already provided
@@ -2941,6 +2942,13 @@ Database::~Database(void)
 /// Practically, this is just setting up the new Scope as a sub-scope of its parent.
 /// The parent Scope should already be registered with \b this Database, or
 /// NULL can be passed to register the global Scope.
+///
+/// On any error this routine throws and \e does \e not delete \b newscope.
+/// Callers are expected to wrap the freshly allocated Scope in a unique_ptr,
+/// pass its raw pointer here, and \c release() it only after this routine
+/// returns successfully.  The previous code path deleted \b newscope on a
+/// duplicate-id error but not on any other error path — that inconsistency
+/// made the public API impossible to use leak-free.
 /// \param newscope is the new Scope being registered
 /// \param parent is the parent Scope or NULL
 void Database::attachScope(Scope *newscope,Scope *parent)
@@ -2964,10 +2972,17 @@ void Database::attachScope(Scope *newscope,Scope *parent)
     ostringstream s;
     s << "Duplicate scope id: ";
     s << newscope->getFullName();
-    delete newscope;
     throw RecovError(s.str());
   }
-  parent->attachScope(newscope);
+  try {
+    parent->attachScope(newscope);
+  } catch (...) {
+    // parent->attachScope took the Scope into its child map only on success;
+    // if it threw we must undo the idmap insertion to keep the Database
+    // consistent and let the caller free \b newscope.
+    idmap.erase(res.first);
+    throw;
+  }
 }
 
 /// Give \b this database the chance to inform existing scopes of any change to the
@@ -3081,9 +3096,13 @@ Scope *Database::findCreateScope(uint8 id,const string &nm,Scope *parent)
   Scope *res = resolveScope(id);
   if (res != (Scope *)0)
     return res;
-  res = globalscope->buildSubScope(id,nm);
-  attachScope(res, parent);
-  return res;
+  // Guard the freshly allocated subscope with a unique_ptr so that any
+  // exception from attachScope() (e.g. a duplicate-id RecovError) reclaims
+  // it rather than leaking.  Database::attachScope() no longer deletes the
+  // scope on failure, so this is the only safe pattern.
+  std::unique_ptr<Scope> guard(globalscope->buildSubScope(id,nm));
+  attachScope(guard.get(), parent);
+  return guard.release();
 }
 
 /// Find a Scope object, given its global id.  Return null if id is not mapped to a Scope.

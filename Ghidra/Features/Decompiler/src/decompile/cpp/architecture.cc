@@ -23,6 +23,7 @@
 #ifdef CPUI_STATISTICS
 #include <cmath>
 #endif
+#include <memory>
 
 namespace ghidra {
 
@@ -159,18 +160,11 @@ Architecture::Architecture(void)
   defaultReturnAddr.space = (AddrSpace *)0;
   evalfp_current = (ProtoModel *)0;
   evalfp_called = (ProtoModel *)0;
-  types = (TypeFactory *)0;
-  translate = (Translate *)0;
-  loader = (LoadImage *)0;
-  pcodeinjectlib = (PcodeInjectLibrary *)0;
-  commentdb = (CommentDatabase *)0;
-  stringManager = (StringManager *)0;
-  cpool = (ConstantPool *)0;
-  symboltab = (Database *)0;
-  context = (ContextDatabase *)0;
+  // The owned scalar sub-components are std::unique_ptr<T> members; they
+  // default-construct to nullptr, so we don't need to explicitly clear them.
   print = PrintLanguageCapability::getDefault()->buildLanguage(this);
   printlist.push_back(print);
-  options = new OptionDatabase(this);
+  options.reset(new OptionDatabase(this));
   loadersymbols_parsed = false;
 #ifdef CPUI_STATISTICS
   stats = new Statistics();
@@ -180,7 +174,24 @@ Architecture::Architecture(void)
 #endif
 }
 
-/// Release resources for all sub-components
+/// Release resources for all sub-components.
+///
+/// The 10 owned scalar sub-components (\c symboltab, \c types, \c translate,
+/// \c loader, \c pcodeinjectlib, \c commentdb, \c stringManager, \c cpool,
+/// \c context, \c options) are now \c std::unique_ptr members; their
+/// destruction is implicit when the Architecture is destroyed, but the
+/// implicit order is the reverse of the declaration order, which would
+/// destroy \c symboltab \e after \c types and other sub-components that
+/// \c symboltab's destructor may transitively reference (Symbol -> Datatype,
+/// Symbol -> Scope hierarchy, etc.).  To preserve the exact destruction
+/// order the previous hand-written body used, we explicitly \c reset() each
+/// owning pointer here in the same sequence the old \c delete chain used.
+/// After this body runs, every smart pointer is already null and the
+/// implicit member destruction at the end of \c ~Architecture is a no-op.
+///
+/// The remaining collections (\c inst, \c extra_pool_rules, \c printlist,
+/// \c protoModels) are still raw-pointer containers; their explicit
+/// cleanup loops remain unchanged.
 Architecture::~Architecture(void)
 
 {				// Delete anything that was allocated
@@ -195,11 +206,10 @@ Architecture::~Architecture(void)
   for(int4 i=0;i<extra_pool_rules.size();++i)
     delete extra_pool_rules[i];
 
-  if (symboltab != (Database *)0)
-    delete symboltab;
+  symboltab.reset();
   for(int4 i=0;i<(int4)printlist.size();++i)
     delete printlist[i];
-  delete options;
+  options.reset();
 #ifdef CPUI_STATISTICS
   delete stats;
 #endif
@@ -208,22 +218,14 @@ Architecture::~Architecture(void)
   for(piter=protoModels.begin();piter!=protoModels.end();++piter)
     delete (*piter).second;
 
-  if (types != (TypeFactory *)0)
-    delete types;
-  if (translate != (Translate *)0)
-    delete translate;
-  if (loader != (LoadImage *)0)
-    delete loader;
-  if (pcodeinjectlib != (PcodeInjectLibrary *)0)
-    delete pcodeinjectlib;
-  if (commentdb != (CommentDatabase *)0)
-    delete commentdb;
-  if (stringManager != (StringManager *)0)
-    delete stringManager;
-  if (cpool != (ConstantPool *)0)
-    delete cpool;
-  if (context != (ContextDatabase *)0)
-    delete context;
+  types.reset();
+  translate.reset();
+  loader.reset();
+  pcodeinjectlib.reset();
+  commentdb.reset();
+  stringManager.reset();
+  cpool.reset();
+  context.reset();
 }
 
 /// The Architecture maintains the set of prototype models that can
@@ -562,7 +564,7 @@ void Architecture::addSpacebase(AddrSpace *basespace,const string &nm,const Varn
 {
   int4 ind = numSpaces();
   
-  SpacebaseSpace *spc = new SpacebaseSpace(this,translate,nm,ind,truncSize,basespace,ptrdata.space->getDelay()+1,isFormal);
+  SpacebaseSpace *spc = new SpacebaseSpace(this,translate.get(),nm,ind,truncSize,basespace,ptrdata.space->getDelay()+1,isFormal);
   if (isreversejustified)
     setReverseJustified(spc);
   insertSpace(spc);
@@ -597,10 +599,13 @@ void Architecture::buildAction(DocumentStorage &store)
 Scope *Architecture::buildDatabase(DocumentStorage &store)
 
 {
-  symboltab = new Database(this,true);
-  Scope *globscope = new ScopeInternal(0,"",this);
-  symboltab->attachScope(globscope,(Scope *)0);
-  return globscope;
+  symboltab.reset(new Database(this,true));
+  // Strong-exception-safe hand-off: if attachScope() throws (e.g. duplicate
+  // global scope), the unique_ptr destroys \b globscope; only on success do
+  // we release the raw pointer into the Database.
+  std::unique_ptr<Scope> globscope(new ScopeInternal(0,"",this));
+  symboltab->attachScope(globscope.get(),(Scope *)0);
+  return globscope.release();
 }
 
 /// This registers the OpBehavior objects for all known p-code OpCodes.
@@ -609,7 +614,7 @@ Scope *Architecture::buildDatabase(DocumentStorage &store)
 void Architecture::buildInstructions(DocumentStorage &store)
 
 {
-  TypeOp::registerInstructions(inst,types,translate);
+  TypeOp::registerInstructions(inst,types.get(),translate.get());
 }
 
 void Architecture::postSpecFile(void)
@@ -624,18 +629,27 @@ void Architecture::postSpecFile(void)
 void Architecture::restoreFromSpec(DocumentStorage &store)
 
 {
-  Translate *newtrans = buildTranslator(store); // Once language is described we can build translator
+  // Build the translator, then commit it to the Architecture's translate
+  // member as soon as initialize() succeeds.  Subsequent setup steps
+  // (parseCompilerConfig, buildAction) may dereference \c translate via
+  // helper functions on Architecture, so we must transfer ownership before
+  // calling them.  Any throw from a later step will then unwind through the
+  // Architecture's destructor, which resets \c translate cleanly.
+  Translate *newtrans = buildTranslator(store);
+  // Until ownership is transferred to \c translate, guard with a unique_ptr
+  // so that an initialize() / modifySpaces() exception cleans up newtrans.
+  std::unique_ptr<Translate> newtrans_guard(newtrans);
   newtrans->initialize(store);
-  translate = newtrans;
+  translate.reset(newtrans_guard.release()); // Architecture now owns it
   modifySpaces(newtrans);	// Give architecture chance to modify spaces, before copying
   copySpaces(newtrans);
-  insertSpace( new FspecSpace(this,translate,numSpaces()));
-  insertSpace( new IopSpace(this,translate,numSpaces()));
-  insertSpace( new JoinSpace(this,translate,numSpaces()));
+  insertSpace( new FspecSpace(this,newtrans,numSpaces()));
+  insertSpace( new IopSpace(this,newtrans,numSpaces()));
+  insertSpace( new JoinSpace(this,newtrans,numSpaces()));
   userops.initialize(this);
   if (translate->getAlignment() <= 8)
     min_funcsymbol_size = translate->getAlignment();
-  pcodeinjectlib = buildPcodeInjectLibrary();
+  pcodeinjectlib.reset(buildPcodeInjectLibrary());
   parseProcessorConfig(store);
   newtrans->setDefaultFloatFormats(); // If no explicit formats registered, put in defaults
   parseCompilerConfig(store);
