@@ -633,14 +633,24 @@ void Architecture::restoreFromSpec(DocumentStorage &store)
   // member as soon as initialize() succeeds.  Subsequent setup steps
   // (parseCompilerConfig, buildAction) may dereference \c translate via
   // helper functions on Architecture, so we must transfer ownership before
-  // calling them.  Any throw from a later step will then unwind through the
+  // calling them.  Any throw from a later step then unwinds through the
   // Architecture's destructor, which resets \c translate cleanly.
+  //
+  // Note: \c buildTranslator's ownership contract is per-subclass.
+  // ArchitectureGhidra::buildTranslator returns a heap-allocated object
+  // that \c translate is expected to own; SleighArchitecture::buildTranslator
+  // returns a pointer into a \c static \c map<int4,Sleigh> (by-value
+  // storage), and the matching \c ~SleighArchitecture explicitly
+  // \c release()s the unique_ptr so the map's value isn't double-destroyed.
+  // We therefore must NOT wrap \c newtrans in a local unique_ptr guard here:
+  // doing so would invoke \c delete on the Sleigh-owned pointer if
+  // \c initialize() threw, which is UB.  In exchange for losing strong
+  // exception safety on the Ghidra path (a single GhidraTranslate would
+  // leak if \c initialize() throws), we keep the Sleigh path well-defined
+  // and match the pre-modernization behavior on this exact code path.
   Translate *newtrans = buildTranslator(store);
-  // Until ownership is transferred to \c translate, guard with a unique_ptr
-  // so that an initialize() / modifySpaces() exception cleans up newtrans.
-  std::unique_ptr<Translate> newtrans_guard(newtrans);
   newtrans->initialize(store);
-  translate.reset(newtrans_guard.release()); // Architecture now owns it
+  translate.reset(newtrans);	// Architecture now owns it (or, for Sleigh, will release() in dtor)
   modifySpaces(newtrans);	// Give architecture chance to modify spaces, before copying
   copySpaces(newtrans);
   insertSpace( new FspecSpace(this,newtrans,numSpaces()));
