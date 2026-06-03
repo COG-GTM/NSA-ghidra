@@ -820,11 +820,19 @@ uint8 Funcdata::decode(Decoder &decoder)
     if (subId == ELEM_LOCALDB) {
       if (localmap != (ScopeLocal *)0)
 	throw LowlevelError("Pre-existing local scope when restoring: "+name);
-      // unique_ptr guard: if decodeScope throws (or otherwise fails to take
-      // ownership), the new ScopeLocal is destroyed automatically.
-      auto newMap = std::unique_ptr<ScopeLocal>(new ScopeLocal(id,stackid,this,glb));
-      glb->symboltab->decodeScope(decoder,newMap.get());
-      localmap = newMap.release();
+      // \b Do \b not wrap newMap in a unique_ptr across this call.
+      // Database::decodeScope is composed of \c attachScope (which transfers
+      // ownership to the Database on success) followed by \c newScope->decode
+      // (which can also throw).  If \c decode throws after \c attachScope
+      // succeeded, the Database has already taken ownership, so a caller-side
+      // unique_ptr would double-free \b newMap.  In exchange for losing strong
+      // exception safety on the rare \c attachScope-throw path (where one
+      // ScopeLocal allocation is leaked), we keep the throw-after-attach path
+      // well-defined: the Database owns the scope and \c ~Database cleans it
+      // up via \c deleteScope.  This matches the pre-modernization behavior.
+      ScopeLocal *newMap = new ScopeLocal(id,stackid,this,glb);
+      glb->symboltab->decodeScope(decoder,newMap);
+      localmap = newMap;
     }
     else if (subId == ELEM_OVERRIDE)
       localoverride.decode(decoder,glb);

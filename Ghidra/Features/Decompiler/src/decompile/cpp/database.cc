@@ -3389,6 +3389,17 @@ void Database::decode(Decoder &decoder)
 /// and then populated with Symbol objects based as the content of a given element.
 /// The element can either be a \<scope> itself, or another element that wraps a \<scope>
 /// element as its first child.
+///
+/// \b Ownership: this routine is composed of two operations on \b newScope:
+/// (1) \c attachScope, which on success transfers ownership of \b newScope to
+/// \b this Database, and (2) \c newScope->decode, which can also throw.  The
+/// caller must therefore \e not hold \b newScope in a \c std::unique_ptr across
+/// this call: if \c decode throws after \c attachScope has succeeded, the
+/// Database already owns \b newScope, and any caller-side unique_ptr would
+/// double-free it.  Instead, callers should pass a freshly allocated raw
+/// pointer; on attachScope failure one allocation leaks (rare, fatal-error
+/// path), and on decode failure the Database owns \b newScope and \c ~Database
+/// will clean it up.
 /// \param decoder is the stream decoder
 /// \param newScope is the empty Scope
 void Database::decodeScope(Decoder &decoder,Scope *newScope)
