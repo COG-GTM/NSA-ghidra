@@ -2197,7 +2197,7 @@ void ParameterPieces::assignAddressFromPieces(vector<VarnodeData> &pieces,bool m
       reverse.push_back(pieces[i]);
     pieces.swap(reverse);
   }
-  JoinRecord::mergeSequence(pieces,glb->translate);
+  JoinRecord::mergeSequence(pieces,glb->translate.get());
   if (pieces.size() == 1) {
     addr = pieces[0].getAddr();
     return;
@@ -2431,7 +2431,7 @@ void ProtoModel::assignParameterStorage(const PrototypePieces &proto,vector<Para
 {
   if (ignoreOutputError) {
     try {
-      output->assignMap(proto,*glb->types,res);
+      output->assignMap(proto,*glb->types.get(),res);
     }
     catch(ParamUnassignedError &err) {
       res.clear();
@@ -2442,9 +2442,9 @@ void ProtoModel::assignParameterStorage(const PrototypePieces &proto,vector<Para
     }
   }
   else {
-    output->assignMap(proto,*glb->types,res);
+    output->assignMap(proto,*glb->types.get(),res);
   }
-  input->assignMap(proto,*glb->types,res);
+  input->assignMap(proto,*glb->types.get(),res);
 
   if (hasThis && res.size() > 1) {
     int4 thisIndex = 1;
@@ -3712,7 +3712,7 @@ void FuncProto::paramShift(int4 paramshift)
   PrototypePieces proto;
   proto.model = model;
   proto.firstVarArgSlot = -1;
-  TypeFactory *typefactory = model->getArch()->types;
+  TypeFactory *typefactory = model->getArch()->types.get();
 
   if (isOutputLocked())
     proto.outtype = getOutputType();
@@ -4005,7 +4005,7 @@ void FuncProto::clearUnlockedOutput(void)
   if (outparam->isTypeLocked()) {
     if (outparam->isSizeTypeLocked()) {
       if (model != (ProtoModel *)0)
-	outparam->resetSizeLockType(getArch()->types);
+	outparam->resetSizeLockType(getArch()->types.get());
     }
   }
   else
@@ -4100,7 +4100,7 @@ void FuncProto::updateInputNoTypes(Funcdata &data,const vector<Varnode *> &trial
   store->clearAllInputs();
   int4 count = 0;
   int4 numtrials = activeinput->getNumTrials();
-  TypeFactory *factory = data.getArch()->types;
+  TypeFactory *factory = data.getArch()->types.get();
   for(int4 i=0;i<numtrials;++i) {
     ParamTrial &trial(activeinput->getTrial(i));
     if (trial.isUsed()) {
@@ -5387,9 +5387,9 @@ void FuncCallSpecs::doInputJoin(int4 slot1,bool ishislot)
   Architecture *glb = getArch();
   Address joinaddr;
   if (ishislot)
-    joinaddr = glb->constructJoinAddress(glb->translate,addr1,trial1.getSize(),addr2,trial2.getSize());
+    joinaddr = glb->constructJoinAddress(glb->translate.get(),addr1,trial1.getSize(),addr2,trial2.getSize());
   else
-    joinaddr = glb->constructJoinAddress(glb->translate,addr2,trial2.getSize(),addr1,trial1.getSize());
+    joinaddr = glb->constructJoinAddress(glb->translate.get(),addr2,trial2.getSize(),addr1,trial1.getSize());
 
   activeinput.joinTrial(slot1,joinaddr,trial1.getSize()+trial2.getSize());
 }
@@ -5821,7 +5821,7 @@ void FuncCallSpecs::buildOutputFromTrials(Funcdata &data,vector<Varnode *> &tria
     deletedops.push_back(lovn->getDef());
     finaloutvn = findPreexistingWhole(hivn,lovn);
     if (finaloutvn == (Varnode *)0) {
-      Address joinaddr = data.getArch()->constructJoinAddress(data.getArch()->translate,
+      Address joinaddr = data.getArch()->constructJoinAddress(data.getArch()->translate.get(),
 							      hivn->getAddr(),hivn->getSize(),
 							      lovn->getAddr(),lovn->getSize());
       finaloutvn = data.newVarnode(hivn->getSize()+lovn->getSize(),joinaddr);

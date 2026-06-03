@@ -1534,7 +1534,7 @@ void PrintC::printCharHexEscape(ostream &s,int4 val)
 bool PrintC::printCharacterConstant(ostream &s,const Address &addr,Datatype *charType) const
 
 {
-  StringManager *manager = glb->stringManager;
+  StringManager *manager = glb->stringManager.get();
 
   // Retrieve UTF8 version of string
   bool isTrunc = false;
@@ -2332,7 +2332,7 @@ void PrintC::resetDefaults(void)
 void PrintC::initializeFromArchitecture(void)
 
 {
-  castStrategy->setTypeFactory(glb->types);
+  castStrategy->setTypeFactory(glb->types.get());
   if (glb->types->getSizeOfLong() == glb->types->getSizeOfInt())	// If long and int sizes are the same
     sizeSuffix = "LL";		// Use "long long" suffix to indicate large integer
   else
@@ -2647,7 +2647,7 @@ void PrintC::docFunction(const Funcdata *fd)
   if ((!isSet(flat))&&(fd->hasNoStructBlocks()))
     throw RecovError("Function not fully decompiled. No structure present.");
   try {
-    commsorter.setupFunctionList(instr_comment_type|head_comment_type,fd,*fd->getArch()->commentdb,option_unplaced);
+    commsorter.setupFunctionList(instr_comment_type|head_comment_type,fd,*fd->getArch()->commentdb.get(),option_unplaced);
     int4 id1 = emit->beginFunction(fd);
     emitCommentFuncHeader(fd);
     emit->tagLine();

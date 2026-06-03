@@ -486,7 +486,7 @@ uintb JumpBasic::backup2Switch(Funcdata *fd,uintb output,Varnode *outvn,Varnode 
       const Address &addr(op->getIn(1-slot)->getAddr());
       uintb otherval;
       if (!addr.isConstant()) {
-	MemoryImage mem(addr.getSpace(),4,1024,fd->getArch()->loader);
+	MemoryImage mem(addr.getSpace(),4,1024,fd->getArch()->loader.get());
 	otherval = mem.getValue(addr.getOffset(),op->getIn(1-slot)->getSize());
       }
       else
@@ -1239,7 +1239,7 @@ void JumpBasic::findNormalized(Funcdata *fd,BlockBasic *rootbl,int4 pathout,uint
     Architecture *glb = fd->getArch();
     Varnode *vn = pathMeld.getVarnode(0);
     if (vn->isReadOnly()) {
-      MemoryImage mem(vn->getSpace(),4,16,glb->loader);
+      MemoryImage mem(vn->getSpace(),4,16,glb->loader.get());
       uintb val = mem.getValue(vn->getOffset(),vn->getSize());
       varnodeIndex = 0;
       jrange->setRange(CircleRange(val,vn->getSize()));
@@ -1604,7 +1604,7 @@ bool JumpBasic::sanityCheck(Funcdata *fd,PcodeOp *indop,vector<Address> &address
 	(addr.getOffset()-addresstable[i].getOffset());
       if (diff > 0xffff) {
 	uint1 buffer[8];
-	LoadImage *loadimage = fd->getArch()->loader;
+	LoadImage *loadimage = fd->getArch()->loader.get();
 	bool dataavail = true;
 	try {
 	  loadimage->loadFill(buffer,4,addresstable[i]);

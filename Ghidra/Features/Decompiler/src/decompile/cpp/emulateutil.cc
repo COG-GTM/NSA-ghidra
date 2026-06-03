@@ -30,7 +30,7 @@ EmulatePcodeOp::EmulatePcodeOp(Architecture *g)
 uintb EmulatePcodeOp::getLoadImageValue(AddrSpace *spc,uintb off,int4 sz) const
 
 {
-  LoadImage *loadimage = glb->loader;
+  LoadImage *loadimage = glb->loader.get();
   uintb res;
 
   loadimage->loadFill((uint1 *)&res,sizeof(uintb),Address(spc,off));
@@ -150,7 +150,7 @@ void EmulatePcodeOp::executeNew(void)
 uintb EmulateSnippet::getLoadImageValue(AddrSpace *spc,uintb off,int4 sz) const
 
 {
-  LoadImage *loadimage = glb->loader;
+  LoadImage *loadimage = glb->loader.get();
   uintb res;
 
   loadimage->loadFill((uint1 *)&res,sizeof(uintb),Address(spc,off));

@@ -17,6 +17,7 @@
 #define __GRAMMAR_HH__
 
 #include "funcdata.hh"
+#include <memory>
 
 namespace ghidra {
 
@@ -223,14 +224,20 @@ private:
   map<string,uint4> keywords;
   GrammarLexer lexer;
   int4 lineno,colno,filenum;	// Location of last token
-  list<TypeDeclarator *> typedec_alloc;
-  list<TypeSpecifiers *> typespec_alloc;
-  list<vector<uint4> *> vecuint4_alloc;
-  list<vector<TypeDeclarator *> *> vecdec_alloc;
-  list<string *> string_alloc;
-  list<uintb *> num_alloc;
-  list<Enumerator *> enum_alloc;
-  list<vector<Enumerator *> *> vecenum_alloc;
+  // Allocation lists for objects produced during parsing.  Each list owns
+  // its elements: when ~CParse runs (or clearAllocation() is called
+  // mid-stream) every unique_ptr in the list is automatically destroyed,
+  // freeing the underlying T.  This replaces the old "manual delete loop
+  // in clearAllocation()" pattern, which was both verbose and not
+  // exception-safe (if the loop iterator throws, remaining entries leak).
+  list<std::unique_ptr<TypeDeclarator>> typedec_alloc;
+  list<std::unique_ptr<TypeSpecifiers>> typespec_alloc;
+  list<std::unique_ptr<vector<uint4>>> vecuint4_alloc;
+  list<std::unique_ptr<vector<TypeDeclarator *>>> vecdec_alloc;
+  list<std::unique_ptr<string>> string_alloc;
+  list<std::unique_ptr<uintb>> num_alloc;
+  list<std::unique_ptr<Enumerator>> enum_alloc;
+  list<std::unique_ptr<vector<Enumerator *>>> vecenum_alloc;
 
   vector<TypeDeclarator *> *lastdecls;
   int4 firsttoken;		// Message to parser indicating desired object

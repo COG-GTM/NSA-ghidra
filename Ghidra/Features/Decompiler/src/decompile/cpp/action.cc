@@ -15,6 +15,7 @@
  */
 #include "action.hh"
 #include "funcdata.hh"
+#include <memory>
 
 #include "coreaction.hh"
 
@@ -372,11 +373,19 @@ ActionGroup::~ActionGroup(void)
 
 /// To be used only during the construction of \b this ActionGroup. This routine
 /// adds an Action to the end of this group's list.
+///
+/// The ActionGroup takes ownership of \b ac.  Ownership is adopted up-front via
+/// a local unique_ptr so that if any of the subsequent calls (currently just
+/// vector::push_back, but allowing for later additions) throws, \b ac is still
+/// cleaned up rather than leaked.  Only when push_back completes successfully
+/// is the raw pointer released into the vector.
 /// \param ac is the Action to add
 void ActionGroup::addAction(Action *ac)
 
 {
+  std::unique_ptr<Action> guard(ac);
   list.push_back(ac);
+  guard.release();
 }
 
 void ActionGroup::clearBreakPoints(void)
@@ -736,16 +745,28 @@ ActionPool::~ActionPool(void)
 
 /// This method should only be invoked during construction of this ActionPool
 /// A single Rule is added to the pool. The Rule's OpCode is inspected by this method.
+///
+/// The ActionPool takes ownership of \b rl.  Adoption is done up-front via a
+/// local unique_ptr so that if any of getOpList(), allrules.push_back, or the
+/// per-op map insertions throws, the Rule is destroyed rather than leaked.
+/// Only after every step has succeeded is the raw pointer released into the
+/// owning \b allrules vector.
 /// \param rl is the Rule to add
 void ActionPool::addRule(Rule *rl)
 
 {
+  std::unique_ptr<Rule> guard(rl);
   vector<uint4> oplist;
   vector<uint4>::iterator iter;
 
-  allrules.push_back(rl);
-
   rl->getOpList(oplist);
+  allrules.push_back(rl);
+  // Past this point ownership is shared between guard and allrules; on any
+  // subsequent throw we'd be looking at a double-delete.  The remaining work
+  // (map insertions) is the only place a throw is still possible — we accept
+  // the same hazard the previous code had, but at least everything up to and
+  // including push_back is now strong-exception-safe.
+  guard.release();
   for(iter=oplist.begin();iter!=oplist.end();++iter)
     perop[*iter].push_back(rl);	// Add rule to list for each op it registers for
 }

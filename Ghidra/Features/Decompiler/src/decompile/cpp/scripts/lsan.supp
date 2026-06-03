@@ -1,0 +1,10 @@
+# LeakSanitizer suppressions for the decompiler memory-leak harness.
+#
+# Anything matched here is reported as a "suppressed leak" and the harness
+# still exits zero.  Keep the list short and well-justified: every entry
+# represents memory we have inspected and consciously decided not to fix
+# in this round.
+#
+# At present the harness reports zero leaks on the base branch, so this
+# file exists only as scaffolding for follow-up work (e.g. once additional
+# scenarios are added that may surface known leaks in third-party libs).

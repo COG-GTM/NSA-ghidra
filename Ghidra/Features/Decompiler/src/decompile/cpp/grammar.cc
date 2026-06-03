@@ -2633,9 +2633,13 @@ TypeDeclarator *CParse::mergeSpecDec(TypeSpecifiers *spec,TypeDeclarator *dec)
 TypeDeclarator *CParse::mergeSpecDec(TypeSpecifiers *spec)
 
 {
-  TypeDeclarator *dec = new TypeDeclarator();
-  typedec_alloc.push_back(dec);
-  return mergeSpecDec(spec,dec);
+  // Allocate, push into the owning list as a unique_ptr, then return the raw
+  // pointer.  The list is the sole owner; if push_back throws, the
+  // unique_ptr destructor reclaims the allocation rather than leaking it.
+  auto dec = std::unique_ptr<TypeDeclarator>(new TypeDeclarator());
+  TypeDeclarator *raw = dec.get();
+  typedec_alloc.push_back(std::move(dec));
+  return mergeSpecDec(spec,raw);
 }
 
 vector<TypeDeclarator *> *CParse::mergeSpecDecVec(TypeSpecifiers *spec,vector<TypeDeclarator *> *declist)
@@ -2649,13 +2653,14 @@ vector<TypeDeclarator *> *CParse::mergeSpecDecVec(TypeSpecifiers *spec,vector<Ty
 vector<TypeDeclarator *> *CParse::mergeSpecDecVec(TypeSpecifiers *spec)
 
 {
-  vector<TypeDeclarator *> *declist;
-  declist = new vector<TypeDeclarator *>();
-  vecdec_alloc.push_back(declist);
-  TypeDeclarator *dec = new TypeDeclarator();
-  typedec_alloc.push_back(dec);
-  declist->push_back( dec );
-  return mergeSpecDecVec(spec,declist);
+  auto declist = std::unique_ptr<vector<TypeDeclarator *>>(new vector<TypeDeclarator *>());
+  vector<TypeDeclarator *> *raw_declist = declist.get();
+  vecdec_alloc.push_back(std::move(declist));
+  auto dec = std::unique_ptr<TypeDeclarator>(new TypeDeclarator());
+  TypeDeclarator *raw_dec = dec.get();
+  typedec_alloc.push_back(std::move(dec));
+  raw_declist->push_back(raw_dec);
+  return mergeSpecDecVec(spec,raw_declist);
 }
 
 uint4 CParse::convertFlag(string *str)
@@ -2716,41 +2721,46 @@ TypeDeclarator *CParse::mergePointer(vector<uint4> *ptr,TypeDeclarator *dec)
 TypeDeclarator *CParse::newDeclarator(string *str)
 
 {
-  TypeDeclarator *res = new TypeDeclarator(*str);
-  typedec_alloc.push_back(res);
-  return res;
+  auto res = std::unique_ptr<TypeDeclarator>(new TypeDeclarator(*str));
+  TypeDeclarator *raw = res.get();
+  typedec_alloc.push_back(std::move(res));
+  return raw;
 }
 
 TypeDeclarator *CParse::newDeclarator(void)
 
 {
-  TypeDeclarator *res = new TypeDeclarator();
-  typedec_alloc.push_back(res);
-  return res;
+  auto res = std::unique_ptr<TypeDeclarator>(new TypeDeclarator());
+  TypeDeclarator *raw = res.get();
+  typedec_alloc.push_back(std::move(res));
+  return raw;
 }
 
 TypeSpecifiers *CParse::newSpecifier(void)
 
 {
-  TypeSpecifiers *spec = new TypeSpecifiers();
-  typespec_alloc.push_back(spec);
-  return spec;
+  auto spec = std::unique_ptr<TypeSpecifiers>(new TypeSpecifiers());
+  TypeSpecifiers *raw = spec.get();
+  typespec_alloc.push_back(std::move(spec));
+  return raw;
 }
 
 vector<TypeDeclarator *> *CParse::newVecDeclarator(void)
 
 {
-  vector<TypeDeclarator *> *res = new vector<TypeDeclarator *>();
-  vecdec_alloc.push_back(res);
-  return res;
+  auto res = std::unique_ptr<vector<TypeDeclarator *>>(new vector<TypeDeclarator *>());
+  vector<TypeDeclarator *> *raw = res.get();
+  vecdec_alloc.push_back(std::move(res));
+  return raw;
 }
 
 vector<uint4> *CParse::newPointer(void)
 
 {
-  vector<uint4> *res = new vector<uint4>();
-  vecuint4_alloc.push_back(res);
-  return res;
+  auto res = std::unique_ptr<vector<uint4>>(new vector<uint4>());
+  vector<uint4> *raw = res.get();
+  vecuint4_alloc.push_back(std::move(res));
+  return raw;
 }
 
 TypeDeclarator *CParse::newArray(TypeDeclarator *dec,uint4 flags,uintb *num)
@@ -2857,25 +2867,28 @@ Datatype *CParse::oldUnion(const string &ident)
 Enumerator *CParse::newEnumerator(const string &ident)
 
 {
-  Enumerator *res = new Enumerator(ident);
-  enum_alloc.push_back(res);
-  return res;
+  auto res = std::unique_ptr<Enumerator>(new Enumerator(ident));
+  Enumerator *raw = res.get();
+  enum_alloc.push_back(std::move(res));
+  return raw;
 }
 
 Enumerator *CParse::newEnumerator(const string &ident,uintb val)
 
 {
-  Enumerator *res = new Enumerator(ident,val);
-  enum_alloc.push_back(res);
-  return res;
+  auto res = std::unique_ptr<Enumerator>(new Enumerator(ident,val));
+  Enumerator *raw = res.get();
+  enum_alloc.push_back(std::move(res));
+  return raw;
 }
 
 vector<Enumerator *> *CParse::newVecEnumerator(void)
 
 {
-  vector<Enumerator *> *res = new vector<Enumerator *>();
-  vecenum_alloc.push_back(res);
-  return res;
+  auto res = std::unique_ptr<vector<Enumerator *>>(new vector<Enumerator *>());
+  vector<Enumerator *> *raw = res.get();
+  vecenum_alloc.push_back(std::move(res));
+  return raw;
 }
 
 Datatype *CParse::newEnum(const string &ident,vector<Enumerator *> *vecenum)
@@ -2916,45 +2929,17 @@ Datatype *CParse::oldEnum(const string &ident)
 void CParse::clearAllocation(void)
 
 {
-  list<TypeDeclarator *>::iterator iter1;
-
-  for(iter1=typedec_alloc.begin();iter1!=typedec_alloc.end();++iter1)
-    delete *iter1;
+  // Each list now stores std::unique_ptr<T>, so .clear() runs the
+  // unique_ptr destructors which in turn delete the underlying objects.
+  // No manual loop is required, and the destructor order is well-defined
+  // even if a destructor throws.
   typedec_alloc.clear();
-
-  list<TypeSpecifiers *>::iterator iter2;
-  for(iter2=typespec_alloc.begin();iter2!=typespec_alloc.end();++iter2)
-    delete *iter2;
   typespec_alloc.clear();
-
-  list<vector<uint4> *>::iterator iter3;
-  for(iter3=vecuint4_alloc.begin();iter3!=vecuint4_alloc.end();++iter3)
-    delete *iter3;
   vecuint4_alloc.clear();
-
-  list<vector<TypeDeclarator *> *>::iterator iter4;
-  for(iter4=vecdec_alloc.begin();iter4!=vecdec_alloc.end();++iter4)
-    delete *iter4;
   vecdec_alloc.clear();
-
-  list<string *>::iterator iter5;
-  for(iter5=string_alloc.begin();iter5!=string_alloc.end();++iter5)
-    delete *iter5;
   string_alloc.clear();
-
-  list<uintb *>::iterator iter6;
-  for(iter6=num_alloc.begin();iter6!=num_alloc.end();++iter6)
-    delete *iter6;
   num_alloc.clear();
-
-  list<Enumerator *>::iterator iter7;
-  for(iter7=enum_alloc.begin();iter7!=enum_alloc.end();++iter7)
-    delete *iter7;
   enum_alloc.clear();
-
-  list<vector<Enumerator *> *>::iterator iter8;
-  for(iter8=vecenum_alloc.begin();iter8!=vecenum_alloc.end();++iter8)
-    delete *iter8;
   vecenum_alloc.clear();
 }
 
@@ -3015,12 +3000,20 @@ int4 CParse::lex(void)
   switch(tok.getType()) {
   case GrammarToken::integer:
   case GrammarToken::charconstant:
-    yylval.i = new uintb(tok.getInteger());
-    num_alloc.push_back(yylval.i);
+    {
+      auto num = std::unique_ptr<uintb>(new uintb(tok.getInteger()));
+      yylval.i = num.get();
+      num_alloc.push_back(std::move(num));
+    }
     return NUMBER;
   case GrammarToken::identifier:
-    yylval.str = tok.getString();
-    string_alloc.push_back(yylval.str);
+    {
+      // The lexer hands us a raw string * — wrap it in unique_ptr before
+      // any other call so a throwing push_back can't leak it.
+      auto str = std::unique_ptr<string>(tok.getString());
+      yylval.str = str.get();
+      string_alloc.push_back(std::move(str));
+    }
     return lookupIdentifier(*yylval.str);
   case GrammarToken::stringval:
     delete tok.getString();

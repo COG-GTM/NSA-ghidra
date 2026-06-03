@@ -50,7 +50,7 @@ const CPoolRecord *ConstantPoolGhidra::getRecord(const vector<uintb> &refs) cons
       s << "Could not retrieve constant pool record for reference: 0x" << refs[0];
       throw LowlevelError(s.str());
     }
-    rec = cache.decodeRecord(refs,decoder,*ghidra->types);
+    rec = cache.decodeRecord(refs,decoder,*ghidra->types.get());
   }
   return rec;
 }

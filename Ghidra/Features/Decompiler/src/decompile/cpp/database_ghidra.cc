@@ -49,7 +49,7 @@ Scope *ScopeGhidra::reresolveScope(uint8 id) const
 
 {
   if (id == 0) return cache;
-  Database *symboltab = ghidra->symboltab;
+  Database *symboltab = ghidra->symboltab.get();
   Scope *cacheScope = symboltab->resolveScope(id);
   if (cacheScope != (Scope *)0)
     return cacheScope;		// Scope was previously cached

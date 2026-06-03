@@ -133,7 +133,7 @@ void CodeDataAnalysis::init(Architecture *g)
 
 {
   glb = g;
-  disengine.init(glb->translate);
+  disengine.init(glb->translate.get());
   alignment = glb->translate->getAlignment();
   modelhits.clear();
   codeunit.clear();
@@ -680,7 +680,7 @@ void CodeDataAnalysis::dumpTargetHits(ostream &s) const
 void CodeDataAnalysis::runModel(void)
 
 {
-  LoadImage *loadimage = glb->loader;
+  LoadImage *loadimage = glb->loader.get();
   LoadImageSection secinfo;
   bool moresections;
   loadimage->openSectionInfo();
@@ -740,7 +740,7 @@ void IfcCodeDataTarget::execute(istream &s)
 
   s >> token;
   vector<ImportRecord> irec;
-  LoadImageBfd *loadbfd = (LoadImageBfd *) dcp->conf->loader;
+  LoadImageBfd *loadbfd = (LoadImageBfd *) dcp->conf->loader.get();
   loadbfd->getImportTable(irec);
   int4 i;
   for(i=0;i<irec.size();++i) {

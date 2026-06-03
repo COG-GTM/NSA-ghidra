@@ -498,12 +498,12 @@ void IfcAddrrangeLoad::execute(istream &s)
 {
   int4 size;
   string name;
-  Address offset=parse_machaddr(s,size,*dcp->conf->types); // Read required address
+  Address offset=parse_machaddr(s,size,*dcp->conf->types.get()); // Read required address
 
   s >> ws;
   if (size <= offset.getAddrSize()) // Was a real size specified
     size = 0;
-  if (dcp->conf->loader == (LoadImage *)0)
+  if (dcp->conf->loader == nullptr)
     throw IfaceExecutionError("No binary loaded");
 
   s >> name;			// Read optional name
@@ -531,7 +531,7 @@ void IfcReadSymbols::execute(istream &s)
 {
   if (dcp->conf == (Architecture *)0) 
     throw IfaceExecutionError("No load image present");
-  if (dcp->conf->loader == (LoadImage *)0)
+  if (dcp->conf->loader == nullptr)
     throw IfaceExecutionError("No binary loaded");
 
   dcp->conf->readLoaderSymbols("::");
@@ -553,7 +553,7 @@ void IfcMapaddress::execute(istream &s)
   Datatype *ct;
   string name;
   int4 size;
-  Address addr = parse_machaddr(s,size,*dcp->conf->types); // Read required address;
+  Address addr = parse_machaddr(s,size,*dcp->conf->types.get()); // Read required address;
 
   s >> ws;
   ct = parse_type(s,name,dcp->conf); // Parse the required type
@@ -594,7 +594,7 @@ void IfcMaphash::execute(istream &s)
   string name;
   uint8 hash;
   int4 size;
-  Address addr = parse_machaddr(s,size,*dcp->conf->types); // Read pc address of hash
+  Address addr = parse_machaddr(s,size,*dcp->conf->types.get()); // Read pc address of hash
 
   s >> hex >> hash;		// Parse the hash value
   s >> ws;
@@ -620,7 +620,7 @@ void IfcMapParam::execute(istream &s)
   int4 size;
   ParameterPieces piece;
   s >> dec >> i;		// Position of the parameter
-  piece.addr = parse_machaddr(s,size,*dcp->conf->types);	// Starting address of parameter
+  piece.addr = parse_machaddr(s,size,*dcp->conf->types.get());	// Starting address of parameter
   piece.type = parse_type(s,name,dcp->conf);
   piece.flags = ParameterPieces::typelock | ParameterPieces::namelock;
 
@@ -640,7 +640,7 @@ void IfcMapReturn::execute(istream &s)
   string name;
   int4 size;
   ParameterPieces piece;
-  piece.addr = parse_machaddr(s,size,*dcp->conf->types);	// Starting address of return storage
+  piece.addr = parse_machaddr(s,size,*dcp->conf->types.get());	// Starting address of return storage
   piece.type = parse_type(s,name,dcp->conf);
   piece.flags = ParameterPieces::typelock;
 
@@ -661,10 +661,10 @@ void IfcMapfunction::execute(istream &s)
 {
   string name;
   int4 size;
-  if ((dcp->conf == (Architecture *)0)||(dcp->conf->loader == (LoadImage *)0))
+  if ((dcp->conf == (Architecture *)0)||(dcp->conf->loader == nullptr))
     throw IfaceExecutionError("No binary loaded");
 
-  Address addr = parse_machaddr(s,size,*dcp->conf->types); // Read required address;
+  Address addr = parse_machaddr(s,size,*dcp->conf->types.get()); // Read required address;
 
   s >> name;			// Read optional name
   if (name.empty())
@@ -691,8 +691,8 @@ void IfcMapexternalref::execute(istream &s)
 
 {
   int4 size1,size2;
-  Address addr1 = parse_machaddr(s,size1,*dcp->conf->types); // Read externalref address
-  Address addr2 = parse_machaddr(s,size2,*dcp->conf->types); // Read referred to address
+  Address addr1 = parse_machaddr(s,size1,*dcp->conf->types.get()); // Read externalref address
+  Address addr2 = parse_machaddr(s,size2,*dcp->conf->types.get()); // Read referred to address
   string name;
 
   s >> name;			// Read optional name
@@ -714,7 +714,7 @@ void IfcMaplabel::execute(istream &s)
   if (name.size()==0)
     throw IfaceParseError("Need label name and address");
   int4 size;
-  Address addr = parse_machaddr(s,size,*dcp->conf->types); // Read address
+  Address addr = parse_machaddr(s,size,*dcp->conf->types.get()); // Read address
 
   Scope *scope;
   if (dcp->fd != (Funcdata *)0)
@@ -758,7 +758,7 @@ void IfcMapconvert::execute(istream &s)
     throw IfaceParseError("Bad convert format");
 
   s >> ws >> hex >> value;
-  Address addr = parse_machaddr(s,size,*dcp->conf->types); // Read pc address of hash
+  Address addr = parse_machaddr(s,size,*dcp->conf->types.get()); // Read pc address of hash
 
   s >> hex >> hash;		// Parse the hash value
 
@@ -789,7 +789,7 @@ void IfcMapunionfacet::execute(istream &s)
   s >> ws >> dec >> fieldNum;
   if (fieldNum < -1 || fieldNum >= ct->numDepend())
     throw IfaceParseError("Bad field index");
-  Address addr = parse_machaddr(s,size,*dcp->conf->types); // Read pc address of hash
+  Address addr = parse_machaddr(s,size,*dcp->conf->types.get()); // Read pc address of hash
 
   s >> hex >> hash;		// Parse the hash value
   ostringstream s2;
@@ -821,9 +821,9 @@ void IfcPrintdisasm::execute(istream &s)
     glb = dcp->fd->getArch();
   }
   else {
-    addr = parse_machaddr(s,size,*dcp->conf->types); // Read beginning address
+    addr = parse_machaddr(s,size,*dcp->conf->types.get()); // Read beginning address
     s >> ws;
-    Address offset2=parse_machaddr(s,size,*dcp->conf->types);
+    Address offset2=parse_machaddr(s,size,*dcp->conf->types.get());
     size = offset2.getOffset() - addr.getOffset();
     glb = dcp->conf;
   }
@@ -845,7 +845,7 @@ void IfcDump::execute(istream &s)
 {
   int4 size;
   uint1 *buffer;
-  Address offset = parse_machaddr(s,size,*dcp->conf->types);
+  Address offset = parse_machaddr(s,size,*dcp->conf->types.get());
 
   buffer = dcp->conf->loader->load(size,offset);
   print_data(*status->fileoptr,buffer,size,offset);
@@ -862,7 +862,7 @@ void IfcDumpbinary::execute(istream &s)
 {
   int4 size;
   uint1 *buffer;
-  Address offset = parse_machaddr(s,size,*dcp->conf->types);
+  Address offset = parse_machaddr(s,size,*dcp->conf->types.get());
   string filename;
 
   s >> ws;
@@ -952,9 +952,9 @@ void IfcPrintCTypes::execute(istream &s)
   if (dcp->conf == (Architecture *)0) 
     throw IfaceExecutionError("No load image present");
 
-  if (dcp->conf->types != (TypeFactory *)0) {
+  if (dcp->conf->types != nullptr) {
     dcp->conf->print->setOutputStream(status->fileoptr);
-    dcp->conf->print->docTypeDefinitions(dcp->conf->types);
+    dcp->conf->print->docTypeDefinitions(dcp->conf->types.get());
   }
 }
 
@@ -1111,8 +1111,8 @@ void IfcSetcontextrange::execute(istream &s)
 
   // Otherwise parse the range
   int4 size1,size2;
-  Address addr1 = parse_machaddr(s,size1,*dcp->conf->types); // Read begin address
-  Address addr2 = parse_machaddr(s,size2,*dcp->conf->types); // Read end address
+  Address addr1 = parse_machaddr(s,size1,*dcp->conf->types.get()); // Read begin address
+  Address addr2 = parse_machaddr(s,size2,*dcp->conf->types.get()); // Read end address
 
   if (addr1.isInvalid() || addr2.isInvalid())
     throw IfaceParseError("Invalid address range");
@@ -1155,8 +1155,8 @@ void IfcSettrackedrange::execute(istream &s)
   }
 
   int4 size1,size2;
-  Address addr1 = parse_machaddr(s,size1,*dcp->conf->types);
-  Address addr2 = parse_machaddr(s,size2,*dcp->conf->types);
+  Address addr1 = parse_machaddr(s,size1,*dcp->conf->types.get());
+  Address addr2 = parse_machaddr(s,size2,*dcp->conf->types.get());
   
   if (addr1.isInvalid() || addr2.isInvalid())
     throw IfaceParseError("Invalid address range");
@@ -1477,7 +1477,7 @@ Varnode *IfaceDecompData::readVarnode(istream &s)
     throw IfaceExecutionError("No function selected");
 
   Address pc;
-  Address loc(parse_varnode(s,defsize,pc,uq,*conf->types));
+  Address loc(parse_varnode(s,defsize,pc,uq,*conf->types.get()));
   if (loc.getSpace()->getType() == IPTR_CONSTANT) {
     if (pc.isInvalid() || (uq == ~((uintm)0)))
       throw IfaceParseError("Missing p-code sequence number");
@@ -1703,7 +1703,7 @@ void IfcNameVarnode::execute(istream &s)
     throw IfaceExecutionError("No function selected");
 
   Address pc;
-  Address loc(parse_varnode(s,size,pc,uq,*dcp->conf->types)); // Get specified varnode
+  Address loc(parse_varnode(s,size,pc,uq,*dcp->conf->types.get())); // Get specified varnode
 
   s >> ws >> token;		// Get the new name of the varnode
   if (token.size()==0)
@@ -1743,7 +1743,7 @@ void IfcTypeVarnode::execute(istream &s)
     throw IfaceExecutionError("No function selected");
 
   Address pc;
-  Address loc(parse_varnode(s,size,pc,uq,*dcp->conf->types)); // Get specified varnode
+  Address loc(parse_varnode(s,size,pc,uq,*dcp->conf->types.get())); // Get specified varnode
   ct = parse_type(s,name,dcp->conf);
 
   dcp->conf->clearAnalysis(dcp->fd); // Make sure varnodes are cleared
@@ -1824,9 +1824,9 @@ void IfcForcegoto::execute(istream &s)
     throw IfaceExecutionError("No function selected");
 
   s >> ws;
-  Address target(parse_machaddr(s,discard,*dcp->conf->types));
+  Address target(parse_machaddr(s,discard,*dcp->conf->types.get()));
   s >> ws;
-  Address dest(parse_machaddr(s,discard,*dcp->conf->types));
+  Address dest(parse_machaddr(s,discard,*dcp->conf->types.get()));
   dcp->fd->getOverride().insertForceGoto(target,dest);
 }
 
@@ -1846,7 +1846,7 @@ void IfcProtooverride::execute(istream &s)
     throw IfaceExecutionError("No function selected");
 
   s >> ws;
-  Address callpoint(parse_machaddr(s,discard,*dcp->conf->types));
+  Address callpoint(parse_machaddr(s,discard,*dcp->conf->types.get()));
   int4 i;
   for(i=0;i<dcp->fd->numCalls();++i)
     if (dcp->fd->getCallSpecs(i)->getOp()->getAddr() == callpoint) break;
@@ -1888,7 +1888,7 @@ void IfcJumpOverride::execute(istream &s)
     throw IfaceExecutionError("No function selected");
 
   s >> ws;
-  Address jmpaddr( parse_machaddr(s,discard,*dcp->conf->types));
+  Address jmpaddr( parse_machaddr(s,discard,*dcp->conf->types.get()));
   JumpTable *jt = dcp->fd->installJumpTable(jmpaddr);
   vector<Address> adtable;
   Address naddr;
@@ -1897,7 +1897,7 @@ void IfcJumpOverride::execute(istream &s)
   string token;
   s >> token;
 //   if (token == "norm") {
-//     naddr = parse_machaddr(s,discard,*dcp->conf->types);
+//     naddr = parse_machaddr(s,discard,*dcp->conf->types.get());
 //     s >> ws;
 //     s >> h;
 //     s >> token;
@@ -1910,7 +1910,7 @@ void IfcJumpOverride::execute(istream &s)
   if (token == "table") {
     s >> ws;
     while(!s.eof()) {
-      Address addr( parse_machaddr(s,discard,*dcp->conf->types));
+      Address addr( parse_machaddr(s,discard,*dcp->conf->types.get()));
       adtable.push_back(addr);
     }
   }
@@ -1940,7 +1940,7 @@ void IfcFlowOverride::execute(istream &s)
     throw IfaceExecutionError("No function selected");
 
   s >> ws;
-  Address addr( parse_machaddr(s,discard,*dcp->conf->types));
+  Address addr( parse_machaddr(s,discard,*dcp->conf->types.get()));
   s >> token;
   if (token.size() == 0)
     throw IfaceParseError("Missing override type");
@@ -1997,7 +1997,7 @@ void IfcGlobalAdd::execute(istream &s)
     throw IfaceExecutionError("No image loaded");
   
   int4 size;
-  Address addr = parse_machaddr(s,size,*dcp->conf->types);
+  Address addr = parse_machaddr(s,size,*dcp->conf->types.get());
   uintb first = addr.getOffset();
   uintb last = first + (size-1);
 
@@ -2017,7 +2017,7 @@ void IfcGlobalRemove::execute(istream &s)
     throw IfaceExecutionError("No image loaded");
   
   int4 size;
-  Address addr = parse_machaddr(s,size,*dcp->conf->types);
+  Address addr = parse_machaddr(s,size,*dcp->conf->types.get());
   uintb first = addr.getOffset();
   uintb last = first + (size-1);
 
@@ -2596,7 +2596,7 @@ void IfcCommentInstr::execute(istream &s)
     throw IfaceExecutionError("No function selected");
 
   int4 size;
-  Address addr = parse_machaddr(s,size,*dcp->conf->types);
+  Address addr = parse_machaddr(s,size,*dcp->conf->types.get());
   s >> ws;
   string comment;
   char tok;
@@ -3009,7 +3009,7 @@ void IfcVolatile::execute(istream &s)
   int4 size = 0;
   if (dcp->conf == (Architecture *)0)
     throw IfaceExecutionError("No load image present");
-  Address addr = parse_machaddr(s,size,*dcp->conf->types); // Read required address
+  Address addr = parse_machaddr(s,size,*dcp->conf->types.get()); // Read required address
 
   if (size == 0)
     throw IfaceExecutionError("Must specify a size");
@@ -3031,7 +3031,7 @@ void IfcReadonly::execute(istream &s)
   int4 size = 0;
   if (dcp->conf == (Architecture *)0)
     throw IfaceExecutionError("No load image present");
-  Address addr = parse_machaddr(s,size,*dcp->conf->types); // Read required address
+  Address addr = parse_machaddr(s,size,*dcp->conf->types.get()); // Read required address
 
   if (size == 0)
     throw IfaceExecutionError("Must specify a size");
@@ -3076,7 +3076,7 @@ void IfcPointerSetting::execute(istream &s)
     Datatype *bt = dcp->conf->types->findByName(baseType);
     if (bt == (Datatype *)0 || bt->getMetatype() != TYPE_STRUCT)
       throw IfaceParseError("Base-type must be a structure");
-    Datatype *ptrto = TypePointerRel::getPtrToFromParent(bt, off, *dcp->conf->types);
+    Datatype *ptrto = TypePointerRel::getPtrToFromParent(bt, off, *dcp->conf->types.get());
     AddrSpace *spc = dcp->conf->getDefaultDataSpace();
     dcp->conf->types->getTypePointerRel(spc->getAddrSize(), bt, ptrto, spc->getWordSize(), off,typeName);
   }
@@ -3112,7 +3112,7 @@ void IfcPreferSplit::execute(istream &s)
   int4 size = 0;
   if (dcp->conf == (Architecture *)0)
     throw IfaceExecutionError("No load image present");
-  Address addr = parse_machaddr(s,size,*dcp->conf->types); // Read storage location
+  Address addr = parse_machaddr(s,size,*dcp->conf->types.get()); // Read storage location
   if (size == 0)
     throw IfaceExecutionError("Must specify a size");
   int4 split = -1;
@@ -3473,12 +3473,12 @@ void IfcTraceAddress::execute(istream &s)
   Address pclow,pchigh;
   s >> ws;
   if (!s.eof()) {
-    pclow = parse_machaddr(s,discard,*dcp->conf->types);
+    pclow = parse_machaddr(s,discard,*dcp->conf->types.get());
     s >> ws;
   }
   pchigh = pclow;
   if (!s.eof()) {
-    pchigh = parse_machaddr(s,discard,*dcp->conf->types);
+    pchigh = parse_machaddr(s,discard,*dcp->conf->types.get());
     s >> ws;
   }
   uqhigh = uqlow = ~((uintm)0);

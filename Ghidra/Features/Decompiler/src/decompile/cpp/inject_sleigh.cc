@@ -332,7 +332,7 @@ void InjectPayloadDynamic::inject(InjectContext &context,PcodeEmit &emit) const
   if (eiter == addrMap.end())
     throw LowlevelError("Missing dynamic inject");
   const Element *el = (*eiter).second->getRoot();
-  XmlDecode decoder(glb->translate,el);
+  XmlDecode decoder(glb->translate.get(),el);
   uint4 rootId = decoder.openElement(ELEM_INST);
   Address addr = Address::decode(decoder);
   while(decoder.peekElement() != 0)
@@ -343,7 +343,7 @@ void InjectPayloadDynamic::inject(InjectContext &context,PcodeEmit &emit) const
 PcodeInjectLibrarySleigh::PcodeInjectLibrarySleigh(Architecture *g)
   : PcodeInjectLibrary(g,g->translate->getUniqueStart(Translate::INJECT))
 {
-  slgh = (const SleighBase *)g->translate;
+  slgh = (const SleighBase *)g->translate.get();
   contextCache.glb = g;
 }
 
@@ -376,7 +376,7 @@ void PcodeInjectLibrarySleigh::parseInject(InjectPayload *payload)
   if (payload->isDynamic())
     return;
   if (slgh == (const SleighBase *)0) { // Make sure we have the sleigh AddrSpaceManager
-    slgh = (const SleighBase *)glb->translate;
+    slgh = (const SleighBase *)glb->translate.get();
     if (slgh == (const SleighBase *)0)
       throw LowlevelError("Registering pcode snippet before language is instantiated");
   }

@@ -18,6 +18,7 @@
 #include "double.hh"
 #include "subflow.hh"
 #include "constseq.hh"
+#include <memory>
 
 namespace ghidra {
 
@@ -1852,7 +1853,7 @@ void ActionReturnRecovery::buildReturnOutput(ParamActive *active,PcodeOp *retop,
     Varnode *hivn = newparam[2];
     ParamTrial &triallo( active->getTrial(0) );
     ParamTrial &trialhi( active->getTrial(1) );
-    Address joinaddr = data.getArch()->constructJoinAddress(data.getArch()->translate,
+    Address joinaddr = data.getArch()->constructJoinAddress(data.getArch()->translate.get(),
 							    trialhi.getAddress(),trialhi.getSize(),
 							    triallo.getAddress(),triallo.getSize());
     PcodeOp *newop = data.newOp(2,retop->getAddr());
@@ -2444,7 +2445,7 @@ bool ActionSetCasts::tryResolutionAdjustment(PcodeOp *op,int4 slot,Funcdata &dat
     if (outResolve < 0) return false;
   }
 
-  TypeFactory *typegrp = data.getArch()->types;
+  TypeFactory *typegrp = data.getArch()->types.get();
   if (inType->needsResolution()) {
     ResolvedUnion resolve(inType,inResolve,*typegrp);
     if (!data.setUnionField(inType, op, slot, resolve))
@@ -2943,7 +2944,7 @@ void ActionNameVars::linkSymbols(Funcdata &data,vector<Varnode *> &namerec)
       linkSpacebaseSymbol(curvn, data, namerec);
   }
 
-  TypeFactory *typeFactory = data.getArch()->types;
+  TypeFactory *typeFactory = data.getArch()->types.get();
   for(int4 i=0;i<manage->numSpaces();++i) { // Build a list of nameable highs
     spc = manage->getSpace(i);
     if (spc == (AddrSpace *)0) continue;
@@ -4776,7 +4777,7 @@ int4 ActionOutputPrototype::apply(Funcdata &data)
     if (data.isHighOn())
       data.getFuncProto().updateOutputTypes(vnlist);
     else
-      data.getFuncProto().updateOutputNoTypes(vnlist,data.getArch()->types);
+      data.getFuncProto().updateOutputNoTypes(vnlist,data.getArch()->types.get());
   }
   return 0;
 }
@@ -5011,7 +5012,7 @@ void ActionInferTypes::buildLocaltypes(Funcdata &data)
   Datatype *ct;
   Varnode *vn;
   VarnodeLocSet::const_iterator iter;
-  TypeFactory *typegrp = data.getArch()->types;
+  TypeFactory *typegrp = data.getArch()->types.get();
 
   for(iter=data.beginLoc();iter!=data.endLoc();++iter) {
     vn = *iter;
@@ -5215,7 +5216,7 @@ void ActionInferTypes::propagateRef(Funcdata &data,Varnode *vn,const Address &ad
   if (ct->getMetatype() == TYPE_UNKNOWN) return; // Don't bother propagating this
   VarnodeLocSet::const_iterator iter,enditer;
   uintb off = addr.getOffset();
-  TypeFactory *typegrp = data.getArch()->types;
+  TypeFactory *typegrp = data.getArch()->types.get();
   Address endaddr = addr + ct->getSize();
   if (endaddr.getOffset() < off) // If the address wrapped
     enditer = data.endLoc(addr.getSpace());	// Go to end of space
@@ -5345,7 +5346,7 @@ void ActionInferTypes::propagateAcrossReturns(Funcdata &data)
   if (data.getFuncProto().isOutputLocked()) return;
   PcodeOp *op = canonicalReturnOp(data);
   if (op == (PcodeOp *)0) return;
-  TypeFactory *typegrp = data.getArch()->types;
+  TypeFactory *typegrp = data.getArch()->types.get();
   Varnode *baseVn = op->getIn(1);
   Datatype *ct = baseVn->getTempType();
   int4 baseSize = baseVn->getSize();
@@ -5376,7 +5377,7 @@ int4 ActionInferTypes::apply(Funcdata &data)
 {
   // Make sure spacebase is accurate or bases could get typed and then ptrarithed
   if (!data.hasTypeRecoveryStarted()) return 0;
-  TypeFactory *typegrp = data.getArch()->types;
+  TypeFactory *typegrp = data.getArch()->types.get();
   Varnode *vn;
   VarnodeLocSet::const_iterator iter;
 
@@ -5462,16 +5463,24 @@ void ActionDatabase::buildDefaultGroups(void)
 void ActionDatabase::universalAction(Architecture *conf)
 
 {
+  // Intermediate Action containers are held in unique_ptrs while they are
+  // being populated, so that any \c new (...) throw inside an addAction /
+  // addRule call cleans up the partially-built container together with
+  // every child Action / Rule it has already adopted.  Ownership is only
+  // released at the moment each intermediate is handed off to its parent.
   vector<Rule *>::iterator iter;
-  ActionGroup *act;
-  ActionGroup *actmainloop;
-  ActionGroup *actfullloop;
-  ActionPool *actprop,*actprop2;
-  ActionPool *actcleanup;
-  ActionGroup *actstackstall;
+  std::unique_ptr<ActionGroup> actmainloop;
+  std::unique_ptr<ActionGroup> actfullloop;
+  std::unique_ptr<ActionPool> actprop;
+  std::unique_ptr<ActionPool> actprop2;
+  std::unique_ptr<ActionPool> actcleanup;
+  std::unique_ptr<ActionGroup> actstackstall;
   AddrSpace *stackspace = conf->getStackSpace();
 
-  act = new ActionRestartGroup(Action::rule_onceperfunc,"universal",1);
+  // \c act is registered with the ActionDatabase before any child Action is
+  // added; the database owns it from this point on, so subsequent throws
+  // from addAction are recovered by ActionDatabase's destructor.
+  ActionGroup *act = new ActionRestartGroup(Action::rule_onceperfunc,"universal",1);
   registerAction(universalname,act);
 
   act->addAction( new ActionStart("base"));
@@ -5484,9 +5493,9 @@ void ActionDatabase::universalAction(Architecture *conf)
   act->addAction( new ActionFuncLink("protorecovery") );
   act->addAction( new ActionFuncLinkOutOnly("noproto") );
   {
-    actfullloop = new ActionGroup(Action::rule_repeatapply,"fullloop");
+    actfullloop.reset(new ActionGroup(Action::rule_repeatapply,"fullloop"));
     {
-      actmainloop = new ActionGroup(Action::rule_repeatapply,"mainloop");
+      actmainloop.reset(new ActionGroup(Action::rule_repeatapply,"mainloop"));
       actmainloop->addAction( new ActionUnreachable("base") );
       actmainloop->addAction( new ActionVarnodeProps("base") );
       actmainloop->addAction( new ActionHeritage("base") );
@@ -5506,9 +5515,9 @@ void ActionDatabase::universalAction(Architecture *conf)
       actmainloop->addAction( new ActionSpacebase("base") );	// Must come before infertypes and nonzeromask
       actmainloop->addAction( new ActionNonzeroMask("analysis") );
       actmainloop->addAction( new ActionInferTypes("typerecovery") );
-      actstackstall = new ActionGroup(Action::rule_repeatapply,"stackstall");
+      actstackstall.reset(new ActionGroup(Action::rule_repeatapply,"stackstall"));
       {
-	actprop = new ActionPool(Action::rule_repeatapply,"oppool1");
+	actprop.reset(new ActionPool(Action::rule_repeatapply,"oppool1"));
 	actprop->addRule( new RuleEarlyRemoval("deadcode"));
 	actprop->addRule( new RuleTermOrder("analysis"));
 	actprop->addRule( new RuleSelectCse("analysis"));
@@ -5648,18 +5657,18 @@ void ActionDatabase::universalAction(Architecture *conf)
 	  actprop->addRule( *iter ); // Add CPU specific rules
 	conf->extra_pool_rules.clear(); // Rules are now absorbed into universal
       }
-      actstackstall->addAction( actprop );
+      actstackstall->addAction( actprop.release() );
       actstackstall->addAction( new ActionLaneDivide("base") );
       actstackstall->addAction( new ActionMultiCse("analysis") );
       actstackstall->addAction( new ActionShadowVar("analysis") );
       actstackstall->addAction( new ActionDeindirect("deindirect") );
       actstackstall->addAction( new ActionStackPtrFlow("stackptrflow",stackspace));
-      actmainloop->addAction( actstackstall );
+      actmainloop->addAction( actstackstall.release() );
       actmainloop->addAction( new ActionRedundBranch("deadcontrolflow") ); // dead code removal
       actmainloop->addAction( new ActionBlockStructure("blockrecovery"));
       actmainloop->addAction( new ActionConstantPtr("typerecovery") );
       {
-	actprop2 = new ActionPool(Action::rule_repeatapply,"oppool2");
+	actprop2.reset(new ActionPool(Action::rule_repeatapply,"oppool2"));
 
 	actprop2->addRule( new RulePushPtr("typerecovery") );
 	actprop2->addRule( new RuleStructOffset0("typerecovery") );
@@ -5668,14 +5677,14 @@ void ActionDatabase::universalAction(Architecture *conf)
 	actprop2->addRule( new RuleLoadVarnode("stackvars") );
 	actprop2->addRule( new RuleStoreVarnode("stackvars") );
       }
-      actmainloop->addAction( actprop2 );
+      actmainloop->addAction( actprop2.release() );
       actmainloop->addAction( new ActionDeterminedBranch("unreachable") );
       actmainloop->addAction( new ActionUnreachable("unreachable") );
       actmainloop->addAction( new ActionNodeJoin("nodejoin") );
       actmainloop->addAction( new ActionConditionalExe("conditionalexe") );
       actmainloop->addAction( new ActionConditionalConst("analysis") );
     }
-    actfullloop->addAction( actmainloop );
+    actfullloop->addAction( actmainloop.release() );
     actfullloop->addAction( new ActionLikelyTrash("protorecovery") );
     actfullloop->addAction( new ActionDirectWrite("protorecovery_a", true) );
     actfullloop->addAction( new ActionDirectWrite("protorecovery_b", false) );
@@ -5687,11 +5696,11 @@ void ActionDatabase::universalAction(Architecture *conf)
     actfullloop->addAction( new ActionStartTypes("typerecovery") );
     actfullloop->addAction( new ActionActiveReturn("protorecovery") );
   }
-  act->addAction( actfullloop );
+  act->addAction( actfullloop.release() );
   act->addAction( new ActionMappedLocalSync("localrecovery") );
   act->addAction( new ActionStartCleanUp("cleanup") );
   {
-    actcleanup = new ActionPool(Action::rule_repeatapply,"cleanup");
+    actcleanup.reset(new ActionPool(Action::rule_repeatapply,"cleanup"));
 
     actcleanup->addRule( new RuleMultNegOne("cleanup") );
     actcleanup->addRule( new RuleAddUnsigned("cleanup") );
@@ -5709,7 +5718,7 @@ void ActionDatabase::universalAction(Architecture *conf)
     actcleanup->addRule( new RuleStringCopy("constsequence"));
     actcleanup->addRule( new RuleStringStore("constsequence"));
   }
-  act->addAction( actcleanup );
+  act->addAction( actcleanup.release() );
 
   act->addAction( new ActionPreferComplement("blockrecovery") );
   act->addAction( new ActionStructureTransform("blockrecovery") );

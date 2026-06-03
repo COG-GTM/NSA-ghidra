@@ -161,7 +161,7 @@ int4 ArraySequence::formByteArray(int4 sz,int4 slot,uint8 rootOff,bool bigEndian
 uint4 ArraySequence::selectStringCopyFunction(int4 &index)
 
 {
-  TypeFactory *types = data.getArch()->types;
+  TypeFactory *types = data.getArch()->types.get();
   if (charType == types->getTypeChar(types->getSizeOfChar())) {
     index = numElements;
     return UserPcodeOp::BUILTIN_STRNCPY;
@@ -275,7 +275,7 @@ Varnode *StringSequence::constructTypedPointer(PcodeOp *insertPoint)
 {
   Varnode *spacePtr;
   AddrSpace *spc = rootAddr.getSpace();
-  TypeFactory *types = data.getArch()->types;
+  TypeFactory *types = data.getArch()->types.get();
   if (spc->getType() == IPTR_SPACEBASE)
     spacePtr = data.constructSpacebaseInput(spc);
   else
@@ -350,7 +350,7 @@ PcodeOp *StringSequence::buildStringCopy(void)
   PcodeOp *insertPoint = moveOps[0].op;		// Earliest COPY in the block
   int4 numBytes = moveOps.size() * charType->getSize();
   Architecture *glb = data.getArch();
-  TypeFactory *types = glb->types;
+  TypeFactory *types = glb->types.get();
   Datatype *charPtrType = types->getTypePointer(types->getSizeOfPointer(),charType,rootAddr.getSpace()->getWordSize());
   Varnode *srcPtr = data.getInternalString(byteArray.data(), numBytes, charPtrType, insertPoint);
   if (srcPtr == (Varnode *)0)

@@ -1643,7 +1643,7 @@ bool Funcdata::applyUnionFacet(SymbolEntry *entry,DynamicHash &dhash)
     return false;
   int4 slot = DynamicHash::getSlotFromHash(entry->getHash());
   int4 fldNum = ((UnionFacetSymbol *)sym)->getFieldNumber();
-  ResolvedUnion resolve(sym->getType(), fldNum, *glb->types);
+  ResolvedUnion resolve(sym->getType(), fldNum, *glb->types.get());
   resolve.setLock(true);
   return setUnionField(sym->getType(),op,slot,resolve);
 }
