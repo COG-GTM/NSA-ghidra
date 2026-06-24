@@ -97,11 +97,24 @@ public class SignatureCallback implements Callback, Serializable {
 	 * Set token signature data.  Method must be invoked by 
 	 * callback handler.
 	 * @param sigCertChain certificate chain used to sign token.
-	 * @param certSignature token signature
+	 * @param certSignature token signature (must not be null)
+	 * @throws IllegalArgumentException if certSignature is null
 	 */
 	public void sign(X509Certificate[] sigCertChain, byte[] certSignature) {
+		if (certSignature == null) {
+			throw new IllegalArgumentException("certSignature must not be null");
+		}
 		this.certChain = sigCertChain;
-		this.signature = (certSignature == null ? null : certSignature.clone());
+		this.signature = certSignature.clone();
+	}
+
+	/**
+	 * Returns whether this callback has been signed (i.e., {@link #sign} was
+	 * successfully called with a non-null signature).
+	 * @return true if a signature has been set
+	 */
+	public boolean isSigned() {
+		return signature != null;
 	}
 
 	public String getSigAlg() {
