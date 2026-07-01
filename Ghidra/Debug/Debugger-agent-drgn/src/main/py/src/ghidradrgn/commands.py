@@ -199,7 +199,7 @@ def ghidra_trace_listen(address: str = '127.0.0.1:0') -> None:
         c, (chost, cport) = s.accept()
         s.close()
         print("Connection from {}:{}".format(chost, cport))
-        STATE.client = Client(c, "dbgeng.dll", methods.REGISTRY)
+        STATE.client = Client(c, "drgn", methods.REGISTRY)
     except ValueError:
         raise RuntimeError("port must be numeric")
 
