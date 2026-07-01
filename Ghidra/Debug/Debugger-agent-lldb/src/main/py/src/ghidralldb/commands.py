@@ -304,8 +304,8 @@ def ghidra_trace_listen(debugger: lldb.SBDebugger, command: str,
 
     Takes an optional address for the host and port on which to listen. Either
     the form 'host:port' or just 'port'. If omitted, it will bind to an
-    ephemeral port on all interfaces. If only the port is given, it will bind to
-    that port on all interfaces. This command will block until the connection is
+    ephemeral port on localhost. If only the port is given, it will bind to
+    that port on localhost. This command will block until the connection is
     established.
     """
 
@@ -313,12 +313,12 @@ def ghidra_trace_listen(debugger: lldb.SBDebugger, command: str,
     host: str
     port: Union[str, int]
     if len(args) == 0:
-        host, port = '0.0.0.0', 0
+        host, port = '127.0.0.1', 0
     elif len(args) == 1:
         address = args[0]
         parts = address.split(':')
         if len(parts) == 1:
-            host, port = '0.0.0.0', parts[0]
+            host, port = '127.0.0.1', parts[0]
         elif len(parts) == 2:
             host, port = parts
         else:
