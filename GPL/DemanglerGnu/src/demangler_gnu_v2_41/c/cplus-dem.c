@@ -200,12 +200,49 @@ cplus_demangle (const char *mangled, int options)
   return (ret);
 }
 
+/* Grow the output buffer used by ada_demangle so that it can hold at least
+   NEED characters.  *BUFP is the buffer, *ALLOCP its current size and *DP a
+   write pointer into it which is adjusted when the buffer is moved.  */
+
+static void
+ada_demangle_reserve (char **bufp, size_t *allocp, char **dp, size_t need)
+{
+  size_t alloc = *allocp;
+  size_t used;
+
+  if (need <= alloc)
+    return;
+
+  used = (size_t) (*dp - *bufp);
+  while (alloc < need)
+    {
+      if (alloc > ((size_t) -1) / 2)
+        {
+          alloc = need;
+          break;
+        }
+      alloc *= 2;
+    }
+
+  *bufp = XRESIZEVEC (char, *bufp, alloc);
+  *allocp = alloc;
+  *dp = *bufp + used;
+}
+
+/* Reserve room for LEN more characters, plus the terminating NUL, in the
+   ada_demangle output buffer.  Must be used before every write through D.  */
+
+#define ADA_RESERVE(len) \
+  ada_demangle_reserve (&demangled, &alloc, &d, \
+                        (size_t) (d - demangled) + (size_t) (len) + 1)
+
 /* Demangle ada names.  The encoding is documented in gcc/ada/exp_dbug.ads.  */
 
 char *
 ada_demangle (const char *mangled, int option ATTRIBUTE_UNUSED)
 {
   int len0;
+  size_t alloc;
   const char* p;
   char *d;
   char *demangled = NULL;
@@ -218,13 +255,14 @@ ada_demangle (const char *mangled, int option ATTRIBUTE_UNUSED)
   if (!ISLOWER (mangled[0]))
     goto unknown;
 
-  /* Most of the demangling will trivially remove chars.  Operator names
-     may add one char but because they are always preceded by '__' which is
-     replaced by '.', they eventually never expand the size.
-     A few special names such as '___elabs' add a few chars (at most 7), but
-     they occur only once.  */
-  len0 = strlen (mangled) + 7 + 1;
-  demangled = XNEWVEC (char, len0);
+  /* Most of the demangling will trivially remove chars, but some encodings
+     do expand: an operator name adds two quotes, a special name such as
+     '___elabs' adds a few chars and a stream operation turns two chars into
+     up to seven ones.  Stream operations may occur once per name segment, so
+     no fixed amount of slack is sufficient; start with a reasonable estimate
+     and grow the buffer on demand through ADA_RESERVE.  */
+  alloc = strlen (mangled) + 7 + 1;
+  demangled = XNEWVEC (char, alloc);
   
   d = demangled;
   p = mangled;
@@ -235,7 +273,10 @@ ada_demangle (const char *mangled, int option ATTRIBUTE_UNUSED)
         {
           /* An identifier, which is always lower case.  */
           do
-            *d++ = *p++;
+            {
+              ADA_RESERVE (1);
+              *d++ = *p++;
+            }
           while (ISLOWER(*p) || ISDIGIT (*p)
                  || (p[0] == '_' && (ISLOWER (p[1]) || ISDIGIT (p[1]))));
         }
@@ -259,6 +300,7 @@ ada_demangle (const char *mangled, int option ATTRIBUTE_UNUSED)
                 {
                   p += slen;
                   slen = strlen (operators[k][1]);
+                  ADA_RESERVE (slen + 2);
                   *d++ = '"';
                   memcpy (d, operators[k][1], slen);
                   d += slen;
@@ -289,6 +331,7 @@ ada_demangle (const char *mangled, int option ATTRIBUTE_UNUSED)
             {
               /* Inner declarations in a task.  */
               p += 4;
+              ADA_RESERVE (1);
               *d++ = '.';
               continue;
             }
@@ -339,6 +382,7 @@ ada_demangle (const char *mangled, int option ATTRIBUTE_UNUSED)
               goto unknown;
             }
           p += 2;
+          ADA_RESERVE (strlen (name));
           strcpy (d, name);
           d += strlen (name);
         }
@@ -357,6 +401,7 @@ ada_demangle (const char *mangled, int option ATTRIBUTE_UNUSED)
             default:
               goto unknown;
             }
+          ADA_RESERVE (strlen (name));
           strcpy (d, name);
           d += strlen (name);
           break;
@@ -403,6 +448,7 @@ ada_demangle (const char *mangled, int option ATTRIBUTE_UNUSED)
                         {
                           p += slen;
                           slen = strlen (special[k][1]);
+                          ADA_RESERVE (slen);
                           memcpy (d, special[k][1], slen);
                           d += slen;
                           break;
@@ -415,6 +461,7 @@ ada_demangle (const char *mangled, int option ATTRIBUTE_UNUSED)
                 }
               else
                 {
+                  ADA_RESERVE (1);
                   *d++ = '.';
                   continue;
                 }
@@ -464,3 +511,5 @@ ada_demangle (const char *mangled, int option ATTRIBUTE_UNUSED)
 
   return demangled;
 }
+
+#undef ADA_RESERVE

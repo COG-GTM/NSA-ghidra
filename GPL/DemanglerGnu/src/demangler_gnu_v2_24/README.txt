@@ -37,6 +37,13 @@ method from cxxfilt.c and placed it, along with supporting methods, into cplus-d
 allows us to perform a simple build of the stand alone demangler, with less source files 
 required.
 
+Also, ada_demangle() was changed to grow its output buffer on demand (see the
+ada_demangle_reserve() helper and the ADA_RESERVE macro).  The binutils version writes into
+a buffer of strlen(mangled) + 8 bytes, which the Ada stream operation encodings ('SR', 'SW',
+'SI' and 'SO', each turning two input characters into up to seven output characters, once per
+name segment) can overrun.  A mangled name such as 'aSO__' repeated overflows that buffer.
+The same change was made to the copy of this file in demangler_gnu_v2_41.
+
 cp-demangle.c *
 
 This file contains a small, two-line change to send a newline character ('\n') along with 
