@@ -290,7 +290,8 @@
             </TD>
 
             <TD valign="top" width="15%">Launches the specified executable with given optional
-            parameters.<BR>
+            parameters.  Disabled by default; see <A href=
+            "#ExecuteAnnotation">Execute Annotation Security</A>.<BR>
             </TD>
 
             <TD valign="top" width="12%">
@@ -366,6 +367,24 @@
 
 
 	
+
+    <H2><A name="ExecuteAnnotation"></A>Execute Annotation Security</H2>
+
+    <BLOCKQUOTE>
+      <P>The <B>Execute</B> annotation launches a program on your machine, using your permissions.
+      Comments are stored in the program database, which means the text of an annotation may have
+      been created by someone else, such as when using a program imported from an untrusted source
+      or a program from a shared project.  For this reason, the Execute annotation will not launch
+      anything unless you have turned on the <B>Annotations.Enable Execute Annotation</B> option in
+      the <B>Listing Fields</B> <A href="help/topics/Tool/ToolOptions_Dialog.htm">tool options</A>.
+      </P>
+
+      <P>Even when that option is on, double-clicking an Execute annotation will first show a
+      confirmation dialog containing the full path of the program to be launched and its
+      arguments.  Nothing is launched until you confirm that dialog.  Review the command carefully;
+      the display text of an annotation is chosen by whoever wrote the comment and does not have to
+      match the program that will be launched.</P>
+    </BLOCKQUOTE>
 
     <H2>Errors</H2>
 
