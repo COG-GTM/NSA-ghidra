@@ -426,7 +426,7 @@ public abstract class AbstractDBTracePropertyMap<T, DR extends AbstractDBTraceAd
 					setValue(obj, value);
 				}
 				ObjectStorage objStorage = new ObjectStorageStreamAdapter(
-					new ObjectInputStream(new ByteArrayInputStream(enc)));
+					new ObjectStorageInputStream(new ByteArrayInputStream(enc)));
 				value.restore(objStorage);
 			}
 			catch (IOException e) {
