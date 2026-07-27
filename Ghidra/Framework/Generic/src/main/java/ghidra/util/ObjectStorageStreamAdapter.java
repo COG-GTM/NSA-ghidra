@@ -36,6 +36,11 @@ public class ObjectStorageStreamAdapter implements ObjectStorage {
     }
     /**
      * Constructor for new ObjectStorageStreamAdapter
+     * <p>
+     * When the content originates from a file or any other untrusted source, the stream must
+     * restrict which classes may be deserialized (see {@link ObjectStorageInputStream}).  This
+     * adapter reads Strings with {@link ObjectInputStream#readObject()}, which would otherwise
+     * instantiate an arbitrary object graph.
      * @param in input stream to read from
      */
     public ObjectStorageStreamAdapter(ObjectInputStream in) {
