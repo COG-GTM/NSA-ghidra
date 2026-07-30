@@ -40,7 +40,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 
 initscript {
-	repositories { maven { url 'https://maven-central.storage-download.googleapis.com/maven2/' } } // TEMP test-env mirror (maven central 429)
+	repositories { mavenCentral() }
 	dependencies { classpath 'commons-io:commons-io:2.21.0' }
 }
 
