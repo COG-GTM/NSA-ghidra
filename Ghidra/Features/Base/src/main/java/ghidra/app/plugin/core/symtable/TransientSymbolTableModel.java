@@ -21,6 +21,7 @@ import static ghidra.program.util.ProgramEvent.*;
 import java.util.HashSet;
 import java.util.List;
 
+import ghidra.framework.model.DomainObjectListener;
 import ghidra.framework.model.DomainObjectListenerBuilder;
 import ghidra.framework.plugintool.PluginTool;
 import ghidra.program.model.listing.Program;
@@ -40,6 +41,8 @@ public class TransientSymbolTableModel extends AbstractSymbolTableModel {
 
 	private SwingUpdateManager updater = new SwingUpdateManager(this::fireTableDataChanged);
 
+	private DomainObjectListener domainObjectListener;
+
 	public TransientSymbolTableModel(PluginTool tool, Program program,
 			HashSet<SymbolRowObject> rowObjects) {
 		super(tool);
@@ -48,7 +51,7 @@ public class TransientSymbolTableModel extends AbstractSymbolTableModel {
 		symbolTable = program.getSymbolTable();
 
 		//@formatter:off
-		program.addListener(
+		domainObjectListener =
 			new DomainObjectListenerBuilder(this)
 					.any(RESTORED, MEMORY_BLOCK_ADDED, MEMORY_BLOCK_REMOVED)
 						.terminate(this::handleRemovedSymbols)
@@ -66,8 +69,9 @@ public class TransientSymbolTableModel extends AbstractSymbolTableModel {
 							 REFERENCE_ADDED, REFERENCE_REMOVED,
 							 EXTERNAL_ENTRY_ADDED, EXTERNAL_ENTRY_REMOVED)
 							     .call(() -> symbolChanged())
-					.build());
+					.build();
 		//@formatter:on
+		program.addListener(domainObjectListener);
 	}
 
 	private void handleRemovedSymbols() {
@@ -122,6 +126,10 @@ public class TransientSymbolTableModel extends AbstractSymbolTableModel {
 
 	@Override
 	public void dispose() {
+		Program program = getProgram();
+		if (program != null) {
+			program.removeListener(domainObjectListener);
+		}
 		super.dispose();
 		updater.dispose();
 		rowObjects.clear();
