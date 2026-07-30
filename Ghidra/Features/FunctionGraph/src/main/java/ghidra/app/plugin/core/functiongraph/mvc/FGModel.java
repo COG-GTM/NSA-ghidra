@@ -54,6 +54,11 @@ public class FGModel {
 		reset();
 	}
 
+	void dispose() {
+		reset();
+		updateManager.dispose();
+	}
+
 	synchronized void graphFunction(Program program, ProgramLocation location) {
 		if (currentRunnableContainsLocation(location)) {
 			// already in the process of graphing; nothing to do

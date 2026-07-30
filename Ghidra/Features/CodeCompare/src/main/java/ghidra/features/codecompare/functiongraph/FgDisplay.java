@@ -179,7 +179,7 @@ public class FgDisplay implements OptionsChangeListener {
 			program = null;
 		}
 		programListener.dispose();
-		controller.cleanup();
+		controller.dispose();
 	}
 
 	@Override

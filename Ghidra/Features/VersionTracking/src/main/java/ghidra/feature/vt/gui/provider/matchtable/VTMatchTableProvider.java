@@ -510,6 +510,10 @@ public class VTMatchTableProvider extends ComponentProviderAdapter
 
 	@Override
 	public void disposed() {
+		if (selectMatchUpdateManager != null) {
+			selectMatchUpdateManager.dispose();
+		}
+
 		if (matchesTable == null) {
 			return;
 		}

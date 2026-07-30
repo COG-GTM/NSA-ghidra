@@ -116,6 +116,7 @@ public class TimeOverviewColorComponent extends JPanel implements ListingOvervie
 	@Override
 	public void dispose() {
 		uninstallActions();
+		refreshUpdater.dispose();
 	}
 
 	/**

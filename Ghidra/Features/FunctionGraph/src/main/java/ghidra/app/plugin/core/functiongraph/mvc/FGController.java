@@ -521,6 +521,11 @@ public class FGController implements ProgramLocationListener, ProgramSelectionLi
 		view.cleanup();
 	}
 
+	public void dispose() {
+		cleanup();
+		model.dispose();
+	}
+
 	public ProgramSelection getSelection() {
 		return viewSettings.getSelection();
 	}

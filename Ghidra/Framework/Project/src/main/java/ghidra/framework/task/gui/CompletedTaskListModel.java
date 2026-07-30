@@ -52,6 +52,7 @@ public class CompletedTaskListModel extends GTaskListModel<GTaskResultInfo> {
 
 	public void dispose() {
 		taskManager.removeTaskListener(taskListener);
+		updateManager.dispose();
 	}
 
 	@Override

@@ -124,10 +124,10 @@ public class WindowsResourceReference extends GhidraScript {
 		// If this is a partial address set, then ignore anywhere with a done it property
 
 		try {
-			decomplib = setUpDecompiler(currentProgram);
+			decomplib = setUpDecompiler(currentProgram, printScriptMsgs);
 			if (decomplib == null) {
 				if (printScriptMsgs) {
-					println("Decompile Error: " + decomplib.getLastMessage());
+					println("Decompile Error: unable to initialize the decompiler");
 				}
 				return;
 			}
@@ -224,7 +224,9 @@ public class WindowsResourceReference extends GhidraScript {
 
 		}
 		finally {
-			decomplib.dispose();
+			if (decomplib != null) {
+				decomplib.dispose();
+			}
 		}
 	}
 
@@ -754,7 +756,7 @@ public class WindowsResourceReference extends GhidraScript {
 
 	private Address lastDecompiledFuncAddr = null;
 
-	private DecompInterface setUpDecompiler(Program program) {
+	private DecompInterface setUpDecompiler(Program program, boolean printScriptMsgs) {
 
 		DecompileOptions options = DecompilerUtils.getDecompileOptions(state.getTool(), program);
 
@@ -766,7 +768,13 @@ public class WindowsResourceReference extends GhidraScript {
 		decompiler.toggleSyntaxTree(true);
 		decompiler.setSimplificationStyle("decompile");
 
-		decompiler.openProgram(program);
+		if (!decompiler.openProgram(program)) {
+			if (printScriptMsgs) {
+				println("Decompile Error: " + decompiler.getLastMessage());
+			}
+			decompiler.dispose();
+			return null;
+		}
 
 		return decompiler;
 	}

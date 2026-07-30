@@ -79,10 +79,20 @@ public class SymPcodeExecutor extends PcodeExecutor<Sym> {
 	final Set<StackUnwindWarning> warnings;
 	private final TaskMonitor monitor;
 
-	private final DecompInterface decomp = new DecompInterface();
+	private DecompInterface decomp;
 	// TODO: This could perhaps be moved into AnalysisForPC?
 	// Meh, as it is, it should only have at most 1 entry
 	private final Map<Function, HighFunction> decompCache = new HashMap<>();
+
+	/**
+	 * Release the native decompiler process, if one was started
+	 */
+	public void dispose() {
+		if (decomp != null) {
+			decomp.dispose();
+			decomp = null;
+		}
+	}
 
 	public SymPcodeExecutor(Program program, CompilerSpec cSpec, SleighLanguage language,
 			SymPcodeArithmetic arithmetic, SymPcodeExecutorState state, Reason reason,
@@ -184,6 +194,9 @@ public class SymPcodeExecutor extends PcodeExecutor<Sym> {
 		Function caller = program.getFunctionManager().getFunctionContaining(callSite);
 
 		HighFunction hfunc = decompCache.computeIfAbsent(caller, c -> {
+			if (decomp == null) {
+				decomp = new DecompInterface();
+			}
 			decomp.openProgram(program);
 			DecompileResults results = decomp.decompileFunction(c, 3, monitor);
 			return results.getHighFunction();

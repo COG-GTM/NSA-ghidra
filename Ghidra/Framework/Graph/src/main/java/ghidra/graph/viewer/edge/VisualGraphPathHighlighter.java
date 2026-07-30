@@ -261,6 +261,7 @@ public class VisualGraphPathHighlighter<V extends VisualVertex, E extends Visual
 	}
 
 	public void dispose() {
+		focusedVertexUpdater.dispose();
 		hoverRunManager.dispose();
 		focusRunManager.dispose();
 		clearCacheSwing();
