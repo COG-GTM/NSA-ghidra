@@ -83,6 +83,12 @@ public class FunctionStartTableProvider extends ProgramAssociatedComponentProvid
 	}
 
 	@Override
+	public void closeComponent() {
+		program.removeListener(this);
+		super.closeComponent();
+	}
+
+	@Override
 	public void domainObjectChanged(DomainObjectChangedEvent ev) {
 		if (!isVisible()) {
 			return;

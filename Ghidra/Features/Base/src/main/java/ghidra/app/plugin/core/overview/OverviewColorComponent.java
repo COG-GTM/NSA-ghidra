@@ -79,6 +79,7 @@ public class OverviewColorComponent extends JPanel implements ListingOverviewPro
 	@Override
 	public void dispose() {
 		service = null;
+		refreshUpdater.dispose();
 		ToolTipManager.sharedInstance().unregisterComponent(this);
 	}
 

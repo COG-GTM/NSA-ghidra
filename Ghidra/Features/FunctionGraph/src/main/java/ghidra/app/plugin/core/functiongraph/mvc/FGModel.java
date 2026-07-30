@@ -52,6 +52,7 @@ public class FGModel {
 
 	void cleanup() {
 		reset();
+		updateManager.dispose();
 	}
 
 	synchronized void graphFunction(Program program, ProgramLocation location) {

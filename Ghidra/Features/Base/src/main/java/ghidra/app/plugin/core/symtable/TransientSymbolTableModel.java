@@ -123,6 +123,7 @@ public class TransientSymbolTableModel extends AbstractSymbolTableModel {
 	@Override
 	public void dispose() {
 		super.dispose();
+		updater.dispose();
 		rowObjects.clear();
 	}
 }

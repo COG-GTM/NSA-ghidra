@@ -127,7 +127,7 @@ public class WindowsResourceReference extends GhidraScript {
 			decomplib = setUpDecompiler(currentProgram);
 			if (decomplib == null) {
 				if (printScriptMsgs) {
-					println("Decompile Error: " + decomplib.getLastMessage());
+					println("Decompile Error: unable to initialize the decompiler");
 				}
 				return;
 			}
@@ -224,7 +224,9 @@ public class WindowsResourceReference extends GhidraScript {
 
 		}
 		finally {
-			decomplib.dispose();
+			if (decomplib != null) {
+				decomplib.dispose();
+			}
 		}
 	}
 
@@ -766,7 +768,10 @@ public class WindowsResourceReference extends GhidraScript {
 		decompiler.toggleSyntaxTree(true);
 		decompiler.setSimplificationStyle("decompile");
 
-		decompiler.openProgram(program);
+		if (!decompiler.openProgram(program)) {
+			decompiler.dispose();
+			return null;
+		}
 
 		return decompiler;
 	}

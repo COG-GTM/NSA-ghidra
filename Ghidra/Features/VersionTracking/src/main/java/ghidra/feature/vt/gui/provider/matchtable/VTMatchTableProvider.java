@@ -527,6 +527,8 @@ public class VTMatchTableProvider extends ComponentProviderAdapter
 		ancillaryFilterDialog.dispose();
 
 		columnFilterManager.dispose();
+
+		selectMatchUpdateManager.dispose();
 	}
 
 	@Override

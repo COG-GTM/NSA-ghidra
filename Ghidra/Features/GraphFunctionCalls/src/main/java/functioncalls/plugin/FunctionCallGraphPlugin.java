@@ -134,6 +134,7 @@ public class FunctionCallGraphPlugin extends ProgramPlugin implements OptionsCha
 
 	@Override
 	protected void dispose() {
+		locationUpdater.dispose();
 		provider.dispose();
 	}
 

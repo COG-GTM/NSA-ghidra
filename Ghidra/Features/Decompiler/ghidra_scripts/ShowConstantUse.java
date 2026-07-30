@@ -129,7 +129,9 @@ public class ShowConstantUse extends GhidraScript {
 			}
 		}
 		finally {
-			decomplib.dispose();
+			if (decomplib != null) {
+				decomplib.dispose();
+			}
 		}
 		tableDialog.setMessage("Finished!");
 	}
@@ -1013,6 +1015,7 @@ public class ShowConstantUse extends GhidraScript {
 		// call it to get results
 		if (!decompInterface.openProgram(currentProgram)) {
 			println("Decompile Error: " + decompInterface.getLastMessage());
+			decompInterface.dispose();
 			return null;
 		}
 

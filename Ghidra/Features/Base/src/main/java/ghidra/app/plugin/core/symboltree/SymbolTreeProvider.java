@@ -616,6 +616,7 @@ public class SymbolTreeProvider extends ComponentProviderAdapter {
 	void dispose() {
 
 		domainChangeUpdateManager.dispose();
+		restoredUpdateManager.dispose();
 		bufferedTasks.clear();
 		tree.dispose();
 

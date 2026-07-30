@@ -338,6 +338,7 @@ public class FillOutStructureHelper {
 		decomplib.toggleSyntaxTree(true);
 		decomplib.setSimplificationStyle("decompile");
 		if (!decomplib.openProgram(currentProgram)) {
+			decomplib.dispose();
 			return null;
 		}
 		return decomplib;
