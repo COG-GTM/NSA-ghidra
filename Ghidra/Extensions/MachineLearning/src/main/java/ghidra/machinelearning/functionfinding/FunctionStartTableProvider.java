@@ -89,6 +89,12 @@ public class FunctionStartTableProvider extends ProgramAssociatedComponentProvid
 	}
 
 	@Override
+	public void removeFromTool() {
+		program.removeListener(this);
+		super.removeFromTool();
+	}
+
+	@Override
 	public void domainObjectChanged(DomainObjectChangedEvent ev) {
 		if (!isVisible()) {
 			return;

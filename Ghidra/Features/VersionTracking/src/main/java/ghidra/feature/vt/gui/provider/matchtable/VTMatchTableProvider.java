@@ -510,6 +510,8 @@ public class VTMatchTableProvider extends ComponentProviderAdapter
 
 	@Override
 	public void disposed() {
+		selectMatchUpdateManager.dispose();
+
 		if (matchesTable == null) {
 			return;
 		}
@@ -527,8 +529,6 @@ public class VTMatchTableProvider extends ComponentProviderAdapter
 		ancillaryFilterDialog.dispose();
 
 		columnFilterManager.dispose();
-
-		selectMatchUpdateManager.dispose();
 	}
 
 	@Override

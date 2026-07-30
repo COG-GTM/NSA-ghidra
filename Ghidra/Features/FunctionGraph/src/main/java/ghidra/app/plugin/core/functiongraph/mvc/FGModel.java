@@ -52,6 +52,10 @@ public class FGModel {
 
 	void cleanup() {
 		reset();
+	}
+
+	void dispose() {
+		reset();
 		updateManager.dispose();
 	}
 

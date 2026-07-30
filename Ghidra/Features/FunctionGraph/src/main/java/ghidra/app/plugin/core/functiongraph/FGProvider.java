@@ -1052,7 +1052,7 @@ public class FGProvider extends VisualGraphComponentProvider<FGVertex, FGEdge, F
 		rebuildGraphUpdateManager.dispose();
 		updateLocationUpdateManager.dispose();
 
-		controller.cleanup();
+		controller.dispose();
 		if (currentProgram != null) {
 			currentProgram.removeListener(this);
 			currentProgram = null;
