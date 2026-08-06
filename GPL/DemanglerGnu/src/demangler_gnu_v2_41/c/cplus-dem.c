@@ -218,11 +218,12 @@ ada_demangle (const char *mangled, int option ATTRIBUTE_UNUSED)
   if (!ISLOWER (mangled[0]))
     goto unknown;
 
-  /* Most of the demangling will trivially remove chars.  Operator names
-     may add one char but because they are always preceded by '__' which is
-     replaced by '.', they eventually never expand the size.
-     A few special names such as '___elabs' add a few chars (at most 7), but
-     they occur only once.  */
+  /* Most of the demangling will trivially remove chars, but stream
+     operation names ('Read/'Write/'Input/'Output), controlled type
+     operation names (.Finalize/.Adjust) and special names such as
+     '___elabs' emit more chars than they consume, so the output can
+     exceed the input length.  Start with a reasonable estimate and
+     grow the buffer on demand.  */
   len0 = strlen (mangled) + 7 + 1;
   demangled = XNEWVEC (char, len0);
   
@@ -230,6 +231,19 @@ ada_demangle (const char *mangled, int option ATTRIBUTE_UNUSED)
   p = mangled;
   while (1)
     {
+      /* Ensure room for the worst-case expansion of this component:
+         the remaining input demangles to at most one output char per
+         input char, plus at most 10 extra chars for the expanding
+         encodings above and the terminating NUL.  */
+      if ((d - demangled) + (int) strlen (p) + 10 + 1 > len0)
+        {
+          int offset = d - demangled;
+
+          len0 = offset + strlen (p) + 10 + 1;
+          demangled = XRESIZEVEC (char, demangled, len0);
+          d = demangled + offset;
+        }
+
       /* An entity names is expected.  */
       if (ISLOWER (*p))
         {
