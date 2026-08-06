@@ -25,6 +25,14 @@ import java.io.*;
  * 
  */
 public class ObjectStorageStreamAdapter implements ObjectStorage {
+	/**
+	 * Only Strings are ever written by this adapter's putString/putStrings methods, so the
+	 * input stream must never be permitted to deserialize any other type.  This prevents
+	 * gadget-chain execution when restoring content from an untrusted stream.
+	 */
+	private static final ObjectInputFilter STRING_ONLY_FILTER =
+		ObjectInputFilter.Config.createFilter("java.lang.String;!*");
+
 	ObjectOutputStream out;
 	ObjectInputStream in;
     /**
@@ -40,6 +48,16 @@ public class ObjectStorageStreamAdapter implements ObjectStorage {
      */
     public ObjectStorageStreamAdapter(ObjectInputStream in) {
     	this.in = in;
+    	ObjectInputFilter existingFilter = in.getObjectInputFilter();
+    	try {
+    		in.setObjectInputFilter(existingFilter == null ? STRING_ONLY_FILTER
+    				: ObjectInputFilter.merge(STRING_ONLY_FILTER, existingFilter));
+    	}
+    	catch (IllegalStateException e) {
+    		// A filter is already installed on the stream or it has already been read from;
+    		// the caller is responsible for restricting the permitted types.
+    		Msg.warn(this, "Could not restrict deserialization to Strings: " + e.getMessage());
+    	}
     }
 
 	@Override
