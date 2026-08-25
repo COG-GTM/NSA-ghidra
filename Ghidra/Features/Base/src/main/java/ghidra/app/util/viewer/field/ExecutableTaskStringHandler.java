@@ -18,6 +18,7 @@ package ghidra.app.util.viewer.field;
 import java.io.*;
 import java.util.*;
 
+import docking.widgets.OptionDialog;
 import docking.widgets.fieldpanel.field.AttributedString;
 import ghidra.app.nav.Navigatable;
 import ghidra.framework.plugintool.ServiceProvider;
@@ -104,9 +105,25 @@ public class ExecutableTaskStringHandler implements AnnotatedStringHandler {
 			}
 		}
 
+		if (!confirmExecution(command)) {
+			return true; // the click was handled; the user cancelled the execution
+		}
+
 		new ProcessThread(command).start();
 
 		return true;
+	}
+
+	private boolean confirmExecution(List<String> command) {
+		String fullCommand = String.join(" ", command);
+		String message = "This comment annotation is requesting to run the following " +
+			"command on your system:\n\n" + fullCommand + "\n\n" +
+			"Comments may come from imported or shared files and are not trusted.\n" +
+			"Only run this command if you know exactly what it does.";
+		int choice = OptionDialog.showOptionDialogWithCancelAsDefaultButton(null,
+			"Run Executable From Comment Annotation?", message, "Run",
+			OptionDialog.WARNING_MESSAGE);
+		return choice == OptionDialog.OPTION_ONE;
 	}
 
 //==================================================================================================
