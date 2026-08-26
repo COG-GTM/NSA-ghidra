@@ -74,6 +74,13 @@ public class GhidraServer extends UnicastRemoteObject implements GhidraServerHan
 	private static final String SERIALIZATION_FILTER_DISABLED_PROPERTY =
 		"ghidra.server.serialization.filter.disabled";
 
+	// Serialization resource limits applied to all inbound RMI object graphs to prevent
+	// resource-exhaustion attacks (e.g., oversized arrays, deeply nested collections)
+	private static final long MAX_SERIAL_DEPTH = 20;
+	private static final long MAX_SERIAL_REFERENCES = 100000;
+	private static final long MAX_SERIAL_ARRAY_LENGTH = 1000000;
+	private static final long MAX_SERIAL_STREAM_BYTES = 10000000;
+
 	private static SslRMIServerSocketFactory serverSocketFactory;
 	private static SslRMIClientSocketFactory clientSocketFactory;
 	private static InetAddress bindAddress;
@@ -893,6 +900,23 @@ public class GhidraServer extends UnicastRemoteObject implements GhidraServerHan
 
 				Class<?> clazz = info.serialClass();
 
+				// Enforce resource limits before any class-based allow decision
+				if (info.depth() > MAX_SERIAL_DEPTH) {
+					return serialReject(info, "exceeded max graph depth of " + MAX_SERIAL_DEPTH);
+				}
+				if (info.references() > MAX_SERIAL_REFERENCES) {
+					return serialReject(info,
+						"exceeded max reference count of " + MAX_SERIAL_REFERENCES);
+				}
+				if (info.arrayLength() > MAX_SERIAL_ARRAY_LENGTH) {
+					return serialReject(info,
+						"exceeded max array length of " + MAX_SERIAL_ARRAY_LENGTH);
+				}
+				if (info.streamBytes() > MAX_SERIAL_STREAM_BYTES) {
+					return serialReject(info,
+						"exceeded max stream bytes of " + MAX_SERIAL_STREAM_BYTES);
+				}
+
 				// Give serial filter patterns first shot
 				Status status = patternFilter.checkInput(info);
 				if (status != Status.UNDECIDED) {
@@ -908,7 +932,7 @@ public class GhidraServer extends UnicastRemoteObject implements GhidraServerHan
 
 				Class<?> componentType = clazz.getComponentType();
 				if (componentType != null && componentType.isPrimitive()) {
-					return Status.ALLOWED; // allow all primitive arrays
+					return Status.ALLOWED; // allow primitive arrays (length limited above)
 				}
 
 				return serialReject(info, "not allowed");
