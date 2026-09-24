@@ -1,0 +1,11 @@
+##VERSION: 2.0
+Module.manifest||GHIDRA||reviewed||END|
+README.md||GHIDRA||||END|
+data/ExtensionPoint.manifest||GHIDRA||||END|
+data/external_dependency_apis.json||GHIDRA||||END|
+extension.properties||GHIDRA||||END|
+ghidra_scripts/ExportExternalDependencies.java||GHIDRA||||END|
+ghidra_scripts/ExportExternalDependencies_build_fixture.py||GHIDRA||||END|
+ghidra_scripts/ExportExternalDependencies_fixture.c||GHIDRA||||END|
+samples/fixture_elf_x86_64-dependencies.json||GHIDRA||||END|
+samples/fixture_elf_x86_64-dependencies.md||GHIDRA||||END|

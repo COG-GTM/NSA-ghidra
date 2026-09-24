@@ -1,0 +1,364 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "name": "fixture_elf_x86_64",
+    "sha256": "1167a44e5c3e8d4c930427f02d4e1138bbc159b04f5b3940a81099837d21e18c",
+    "format": "Executable and Linking Format (ELF)",
+    "arch": "x86:LE:64:default",
+    "imageBase": "0x400000"
+  },
+  "endpoints": [
+    {
+      "kind": "port",
+      "value": "8080",
+      "address": "004012af",
+      "referencingFunctions": [
+        "open_broker_socket"
+      ],
+      "nearestNetworkCall": {
+        "api": "htons",
+        "address": "004012af",
+        "function": "open_broker_socket",
+        "heuristic": false
+      },
+      "confidence": "high",
+      "protocolHint": "http-alt",
+      "notes": [
+        "argument to htons",
+        "conventional service: http-alt"
+      ]
+    },
+    {
+      "kind": "connection_string",
+      "value": "postgresql://svc_user:***@db.example-geo.internal:5432/tiles",
+      "address": "00402008",
+      "referencingFunctions": [
+        "open_database"
+      ],
+      "nearestNetworkCall": {
+        "api": "PQconnectdb",
+        "address": "0040121c",
+        "function": "open_database",
+        "heuristic": false
+      },
+      "confidence": "high",
+      "protocolHint": "postgresql",
+      "notes": [
+        "credential redacted",
+        "passed as argument 0 to PQconnectdb at 0040121c"
+      ]
+    },
+    {
+      "kind": "url",
+      "value": "http://tiles.example-geo.internal/wms?SERVICE=WMS&REQUEST=GetCapabilities",
+      "address": "00402050",
+      "referencingFunctions": [
+        "fetch_capabilities"
+      ],
+      "nearestNetworkCall": {
+        "api": "curl_easy_setopt",
+        "address": "00401241",
+        "function": "fetch_capabilities",
+        "heuristic": false
+      },
+      "confidence": "high",
+      "protocolHint": "ogc/wms",
+      "notes": [
+        "OGC web service request",
+        "passed as argument 2 to curl_easy_setopt at 00401241"
+      ]
+    },
+    {
+      "kind": "hostname",
+      "value": "tiles-standby.example-geo.internal",
+      "address": "004020a0",
+      "referencingFunctions": [
+        "resolve_tile_hosts"
+      ],
+      "nearestNetworkCall": {
+        "api": "getaddrinfo",
+        "address": "00401329",
+        "function": "resolve_tile_hosts",
+        "heuristic": false
+      },
+      "confidence": "high",
+      "protocolHint": "",
+      "notes": [
+        "passed as argument 0 to getaddrinfo at 00401329"
+      ]
+    },
+    {
+      "kind": "header_constant",
+      "value": "Authorization: ***",
+      "address": "004020c3",
+      "referencingFunctions": [
+        "fetch_capabilities"
+      ],
+      "nearestNetworkCall": {
+        "api": "curl_easy_setopt",
+        "address": "00401265",
+        "function": "fetch_capabilities",
+        "heuristic": true
+      },
+      "confidence": "high",
+      "protocolHint": "http-auth",
+      "notes": [
+        "HTTP authentication header",
+        "credential redacted",
+        "nearest call in same function (heuristic)"
+      ]
+    },
+    {
+      "kind": "ipv4",
+      "value": "10.20.30.40",
+      "address": "004020d9",
+      "referencingFunctions": [
+        "open_broker_socket"
+      ],
+      "nearestNetworkCall": {
+        "api": "inet_pton",
+        "address": "004012c8",
+        "function": "open_broker_socket",
+        "heuristic": false
+      },
+      "confidence": "high",
+      "protocolHint": "",
+      "notes": [
+        "passed as argument 1 to inet_pton at 004012c8"
+      ]
+    },
+    {
+      "kind": "hostname",
+      "value": "tiles.example-geo.internal",
+      "address": "004020eb",
+      "referencingFunctions": [
+        "resolve_tile_hosts"
+      ],
+      "nearestNetworkCall": {
+        "api": "getaddrinfo",
+        "address": "00401307",
+        "function": "resolve_tile_hosts",
+        "heuristic": false
+      },
+      "confidence": "high",
+      "protocolHint": "",
+      "notes": [
+        "passed as argument 0 to getaddrinfo at 00401307"
+      ]
+    }
+  ],
+  "apiCallSites": [
+    {
+      "api": "PQconnectdb",
+      "category": "database",
+      "address": "0040121c",
+      "function": "open_database",
+      "protocolHint": "postgresql",
+      "external": false,
+      "notes": [
+        "statically linked or stub"
+      ]
+    },
+    {
+      "api": "curl_easy_setopt",
+      "category": "http",
+      "address": "00401241",
+      "function": "fetch_capabilities",
+      "protocolHint": "http",
+      "external": false,
+      "notes": [
+        "statically linked or stub",
+        "CURLOPT_URL identifies the endpoint argument; CURLOPT_SSL_VERIFYPEER=0 is reported as a finding",
+        "option CURLOPT_URL"
+      ]
+    },
+    {
+      "api": "curl_easy_setopt",
+      "category": "http",
+      "address": "00401253",
+      "function": "fetch_capabilities",
+      "protocolHint": "http",
+      "external": false,
+      "notes": [
+        "statically linked or stub",
+        "CURLOPT_URL identifies the endpoint argument; CURLOPT_SSL_VERIFYPEER=0 is reported as a finding",
+        "option CURLOPT_SSL_VERIFYPEER"
+      ]
+    },
+    {
+      "api": "curl_easy_setopt",
+      "category": "http",
+      "address": "00401265",
+      "function": "fetch_capabilities",
+      "protocolHint": "http",
+      "external": false,
+      "notes": [
+        "statically linked or stub",
+        "CURLOPT_URL identifies the endpoint argument; CURLOPT_SSL_VERIFYPEER=0 is reported as a finding",
+        "option 10018 not in API table"
+      ]
+    },
+    {
+      "api": "SSL_CTX_set_verify",
+      "category": "tls",
+      "address": "0040127e",
+      "function": "disable_tls_checks",
+      "protocolHint": "tls",
+      "external": false,
+      "notes": [
+        "statically linked or stub",
+        "Mode 0 (SSL_VERIFY_NONE) is reported as a finding",
+        "verify mode 0 (SSL_VERIFY_NONE)"
+      ]
+    },
+    {
+      "api": "htons",
+      "category": "socket",
+      "address": "004012af",
+      "function": "open_broker_socket",
+      "protocolHint": "",
+      "external": false,
+      "notes": [
+        "statically linked or stub",
+        "Port constant argument is recovered"
+      ]
+    },
+    {
+      "api": "inet_pton",
+      "category": "resolver",
+      "address": "004012c8",
+      "function": "open_broker_socket",
+      "protocolHint": "",
+      "external": false,
+      "notes": [
+        "statically linked or stub"
+      ]
+    },
+    {
+      "api": "connect",
+      "category": "socket",
+      "address": "004012d7",
+      "function": "open_broker_socket",
+      "protocolHint": "tcp",
+      "external": false,
+      "notes": [
+        "statically linked or stub",
+        "BSD socket connect; port comes from the sockaddr argument"
+      ]
+    },
+    {
+      "api": "getaddrinfo",
+      "category": "resolver",
+      "address": "00401307",
+      "function": "resolve_tile_hosts",
+      "protocolHint": "dns",
+      "external": false,
+      "notes": [
+        "statically linked or stub"
+      ]
+    },
+    {
+      "api": "getaddrinfo",
+      "category": "resolver",
+      "address": "00401329",
+      "function": "resolve_tile_hosts",
+      "protocolHint": "dns",
+      "external": false,
+      "notes": [
+        "statically linked or stub"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "severity": "high",
+      "rule": "hardcoded_credential",
+      "address": "00402008",
+      "function": "open_database",
+      "detail": "credential embedded in connection_string constant (redacted)"
+    },
+    {
+      "severity": "high",
+      "rule": "hardcoded_credential",
+      "address": "004020c3",
+      "function": "fetch_capabilities",
+      "detail": "credential embedded in header_constant constant (redacted)"
+    },
+    {
+      "severity": "high",
+      "rule": "tls_verification_disabled",
+      "address": "00401253",
+      "function": "fetch_capabilities",
+      "detail": "curl_easy_setopt(CURLOPT_SSL_VERIFYPEER, 0) disables TLS peer verification"
+    },
+    {
+      "severity": "high",
+      "rule": "tls_verification_disabled",
+      "address": "0040127e",
+      "function": "disable_tls_checks",
+      "detail": "SSL_CTX_set_verify called with verify mode 0 (SSL_VERIFY_NONE)"
+    },
+    {
+      "severity": "medium",
+      "rule": "plaintext_protocol",
+      "address": "00402008",
+      "function": "open_database",
+      "detail": "postgresql:// scheme does not require transport encryption; no TLS call site in referencing functions"
+    },
+    {
+      "severity": "medium",
+      "rule": "plaintext_protocol",
+      "address": "00402050",
+      "function": "fetch_capabilities",
+      "detail": "http:// scheme does not require transport encryption; no TLS call site in referencing functions"
+    },
+    {
+      "severity": "low",
+      "rule": "duplicate_host_constants",
+      "address": "004012e2",
+      "function": "resolve_tile_hosts",
+      "detail": "function references 2 distinct hosts: tiles-standby.example-geo.internal, tiles.example-geo.internal (possible primary/failover pair)"
+    },
+    {
+      "severity": "low",
+      "rule": "plaintext_port",
+      "address": "004012af",
+      "function": "open_broker_socket",
+      "detail": "port 8080 (http-alt) is conventionally plaintext; no TLS call site in referencing functions"
+    },
+    {
+      "severity": "info",
+      "rule": "private_address_embedded",
+      "address": "004020d9",
+      "function": "open_broker_socket",
+      "detail": "private or loopback address 10.20.30.40 is embedded; deployment network is fixed at build time"
+    }
+  ],
+  "summary": {
+    "endpointCount": 7,
+    "apiCallSiteCount": 10,
+    "findingCount": 9,
+    "endpointsByKind": {
+      "connection_string": 1,
+      "header_constant": 1,
+      "hostname": 2,
+      "ipv4": 1,
+      "port": 1,
+      "url": 1
+    },
+    "findingsBySeverity": {
+      "high": 4,
+      "info": 1,
+      "low": 2,
+      "medium": 2
+    },
+    "apiCallSitesByCategory": {
+      "database": 1,
+      "http": 3,
+      "resolver": 3,
+      "socket": 2,
+      "tls": 1
+    },
+    "warnings": []
+  }
+}
