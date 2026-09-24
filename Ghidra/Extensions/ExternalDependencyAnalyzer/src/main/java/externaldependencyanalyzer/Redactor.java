@@ -26,11 +26,18 @@ public final class Redactor {
 
 	public static final String MASK = "***";
 
-	private static final Pattern USERINFO =
+	private static final Pattern USERINFO_PASSWORD =
 		Pattern.compile("(?<=://)([^/@:\\s]+):([^@/\\s]+)(?=@)");
 
+	private static final Pattern USERINFO_BARE =
+		Pattern.compile("(?<=://)([^/@:\\s]+)(?=@)");
+
 	private static final Pattern KEY_VALUE = Pattern.compile(
-		"(?i)\\b(password|passwd|pwd|secret|api[_-]?key|apikey|access[_-]?token|auth[_-]?token|token|client[_-]?secret|sasl\\.password)\\s*[=:]\\s*(?:'[^']*'|\"[^\"]*\"|\\{[^}]*\\}|[^;&\\s,'\"]+)");
+		"(?i)\\b(password|passwd|pwd|pass|secret|secret[_-]?key|api[_-]?key|apikey|api[_-]?secret|" +
+			"access[_-]?key|access[_-]?token|auth[_-]?token|auth|token|id[_-]?token|" +
+			"refresh[_-]?token|session[_-]?token|sas[_-]?token|client[_-]?secret|client[_-]?key|" +
+			"private[_-]?key|shared[_-]?access[_-]?key|account[_-]?key|credentials?|key|sig|" +
+			"signature|sasl\\.password)\\s*[=:]\\s*(?:'[^']*'|\"[^\"]*\"|\\{[^}]*\\}|[^;&\\s,'\"]+)");
 
 	private static final Pattern BEARER =
 		Pattern.compile("(?i)\\b(Bearer|Basic|Token|ApiKey)\\s+([A-Za-z0-9._~+/=-]{8,})");
@@ -52,9 +59,15 @@ public final class Redactor {
 		boolean changed = false;
 		String out = s;
 
-		Matcher m = USERINFO.matcher(out);
+		Matcher m = USERINFO_PASSWORD.matcher(out);
 		if (m.find()) {
 			out = m.replaceAll("$1:" + MASK);
+			changed = true;
+		}
+
+		m = USERINFO_BARE.matcher(out);
+		if (m.find()) {
+			out = m.replaceAll(MASK);
 			changed = true;
 		}
 

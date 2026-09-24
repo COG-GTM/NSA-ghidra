@@ -17,6 +17,8 @@ package externaldependencyanalyzer;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 import com.google.gson.*;
@@ -40,7 +42,7 @@ public final class ApiTable {
 	/** One recognised API. Argument indices are zero-based; -1 means "not applicable". */
 	public record ApiEntry(String name, String category, String protocolHint, String notes,
 			int hostArgument, int portArgument, int optionArgument, int verifyModeArgument,
-			Map<Long, String> optionValues) {
+			Map<Long, String> optionValues, boolean sockaddr) {
 
 		public boolean hasHostArgument() {
 			return hostArgument >= 0;
@@ -61,13 +63,20 @@ public final class ApiTable {
 
 	private final Map<String, ApiEntry> byName = new TreeMap<>();
 	private final String source;
+	private final String contentHash;
 
-	private ApiTable(String source) {
+	private ApiTable(String source, String contentHash) {
 		this.source = source;
+		this.contentHash = contentHash;
 	}
 
 	public String getSource() {
 		return source;
+	}
+
+	/** SHA-256 of the JSON the table was loaded from; identical tables give identical hashes. */
+	public String getContentHash() {
+		return contentHash;
 	}
 
 	public Collection<ApiEntry> entries() {
@@ -145,7 +154,7 @@ public final class ApiTable {
 					throw new IOException("not a readable file");
 				}
 				try (InputStream in = new FileInputStream(f)) {
-					return load(readBounded(in), f.getAbsolutePath());
+					return load(in, f.getAbsolutePath());
 				}
 			}
 			catch (IOException | RuntimeException e) {
@@ -159,7 +168,7 @@ public final class ApiTable {
 		catch (IOException e) {
 			Msg.error(ApiTable.class, "Bundled API table could not be loaded", e);
 			warnings.add("API table unavailable; API call sites were not scanned");
-			return new ApiTable("none");
+			return new ApiTable("none", "none");
 		}
 	}
 
@@ -171,10 +180,26 @@ public final class ApiTable {
 		return new ByteArrayInputStream(data);
 	}
 
+	public static String sha256(byte[] data) {
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			StringBuilder sb = new StringBuilder();
+			for (byte b : md.digest(data)) {
+				sb.append(String.format("%02x", b));
+			}
+			return sb.toString();
+		}
+		catch (NoSuchAlgorithmException e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
 	static ApiTable load(InputStream in, String source) throws IOException {
-		ApiTable table = new ApiTable(source);
+		byte[] data = readBounded(in).readAllBytes();
+		ApiTable table = new ApiTable(source, sha256(data));
 		JsonElement root;
-		try (Reader r = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+		try (Reader r = new InputStreamReader(new ByteArrayInputStream(data),
+			StandardCharsets.UTF_8)) {
 			root = JsonParser.parseReader(r);
 		}
 		catch (JsonParseException e) {
@@ -226,7 +251,19 @@ public final class ApiTable {
 		}
 		return new ApiEntry(name, category, protocolHint, sanitizeNotes(str(o, "notes", "")),
 			intArg(o, "hostArgument"), intArg(o, "portArgument"), intArg(o, "optionArgument"),
-			intArg(o, "verifyModeArgument"), Collections.unmodifiableMap(optionValues));
+			intArg(o, "verifyModeArgument"), Collections.unmodifiableMap(optionValues),
+			bool(o, "sockaddr"));
+	}
+
+	private static boolean bool(JsonObject o, String key) throws IOException {
+		JsonElement e = o.get(key);
+		if (e == null || e.isJsonNull()) {
+			return false;
+		}
+		if (!e.isJsonPrimitive() || !e.getAsJsonPrimitive().isBoolean()) {
+			throw new IOException("field " + key + " is not a boolean");
+		}
+		return e.getAsBoolean();
 	}
 
 	private static String str(JsonObject o, String key, String dflt) throws IOException {

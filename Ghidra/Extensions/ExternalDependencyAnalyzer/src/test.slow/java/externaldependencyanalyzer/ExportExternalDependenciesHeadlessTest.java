@@ -127,8 +127,9 @@ public class ExportExternalDependenciesHeadlessTest extends AbstractGhidraHeadle
 		try (var stream = Files.list(out)) {
 			stream.map(p -> p.getFileName().toString()).sorted().forEach(names::add);
 		}
-		assertEquals(List.of("fixt_re____name.bin-dependencies.json",
-			"fixt_re____name.bin-dependencies.md"), names);
+		String base = OutputNames.safeName(odd.getName());
+		assertTrue(base, base.matches("fixt_re____name\\.bin-[0-9a-f]{8}"));
+		assertEquals(List.of(base + "-dependencies.json", base + "-dependencies.md"), names);
 		String json = Files.readString(out.resolve(names.get(0)), StandardCharsets.UTF_8);
 		assertEquals(odd.getName(), DependencyReportReader.fromJson(json).program().name());
 	}

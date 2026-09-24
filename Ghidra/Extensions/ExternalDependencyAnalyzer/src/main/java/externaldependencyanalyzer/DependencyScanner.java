@@ -28,7 +28,8 @@ import ghidra.program.model.listing.*;
 import ghidra.program.model.mem.Memory;
 import ghidra.program.model.mem.MemoryAccessException;
 import ghidra.program.model.mem.MemoryBlock;
-import ghidra.program.model.scalar.Scalar;
+import ghidra.program.model.pcode.PcodeOp;
+import ghidra.program.model.pcode.Varnode;
 import ghidra.program.model.symbol.*;
 import ghidra.util.exception.CancelledException;
 import ghidra.util.task.TaskMonitor;
@@ -68,6 +69,7 @@ public final class DependencyScanner {
 		final Set<Address> referencingFunctions = new TreeSet<>();
 		final List<String> notes = new ArrayList<>();
 		final Map<Address, Address> referenceSites = new TreeMap<>();
+		final Map<Address, NetworkCallLink> directLinks = new TreeMap<>();
 		NetworkCallLink link;
 		Confidence confidence;
 
@@ -129,8 +131,11 @@ public final class DependencyScanner {
 			}
 			followReferences(sym.getAddress(), api, true, 0, new HashSet<>());
 			if (sym.getObject() instanceof Function f) {
-				for (Address thunk : f.getFunctionThunkAddresses(true)) {
-					followReferences(thunk, api, true, 0, new HashSet<>());
+				Address[] thunks = f.getFunctionThunkAddresses(true);
+				if (thunks != null) {
+					for (Address thunk : thunks) {
+						followReferences(thunk, api, true, 0, new HashSet<>());
+					}
 				}
 			}
 		}
@@ -200,6 +205,9 @@ public final class DependencyScanner {
 			}
 			else {
 				notes.add("statically linked or stub");
+			}
+			if (!api.notes().isEmpty()) {
+				notes.add(api.notes());
 			}
 			CallSiteInfo existing = callSites.get(from);
 			if (existing == null) {
@@ -343,8 +351,8 @@ public final class DependencyScanner {
 						if (b != null) {
 							b.referencingFunctions.add(cs.function().getEntryPoint());
 							b.referenceSites.putIfAbsent(cs.address(), cs.function().getEntryPoint());
-							b.link = new NetworkCallLink(api.name(), cs.address().toString(),
-								functionName(cs.function()), !host.pcode());
+							b.directLinks.put(cs.address(), new NetworkCallLink(api.name(),
+								cs.address().toString(), functionName(cs.function()), !host.pcode()));
 							b.confidence = Confidence.HIGH;
 						}
 					}
@@ -421,50 +429,111 @@ public final class DependencyScanner {
 		if (!options.endpoints() || !options.portHeuristics()) {
 			return;
 		}
-		Set<Address> socketFunctions = new TreeSet<>();
+		Map<Address, CallSiteInfo> sockaddrFunctions = new TreeMap<>();
 		for (CallSiteInfo cs : callSites.values()) {
-			if (cs.function() != null && cs.api().category().equals("socket") &&
-				!cs.api().name().equals("htons")) {
-				socketFunctions.add(cs.function().getEntryPoint());
+			if (cs.function() != null && cs.api().sockaddr()) {
+				sockaddrFunctions.putIfAbsent(cs.function().getEntryPoint(), cs);
 			}
 		}
-		for (Address entry : socketFunctions) {
+		boolean bigEndian = program.getLanguage().isBigEndian();
+		for (Map.Entry<Address, CallSiteInfo> fe : sockaddrFunctions.entrySet()) {
 			monitor.checkCancelled();
+			Address entry = fe.getKey();
 			Function func = funcMgr.getFunctionAt(entry);
 			if (func == null) {
 				continue;
 			}
+			CallSiteInfo sockaddrCall = fe.getValue();
+			NetworkCallLink link = new NetworkCallLink(sockaddrCall.api().name(),
+				sockaddrCall.address().toString(), functionName(func), true);
+			String apis = apiNamesIn(entry);
+			ConstantTracker constants = new ConstantTracker();
 			InstructionIterator it = listing.getInstructions(func.getBody(), true);
 			while (it.hasNext()) {
 				Instruction instr = it.next();
-				if (instr.getFlowType().isCall()) {
+				if (instr.getFlowType().isCall() || instr.getFlowType().isJump()) {
+					constants.clear();
 					continue;
 				}
-				String mnemonic = instr.getMnemonicString().toLowerCase(Locale.ROOT);
-				if (!mnemonic.startsWith("mov") && !mnemonic.startsWith("str") &&
-					!mnemonic.startsWith("sth") && !mnemonic.equals("li")) {
-					continue;
-				}
-				for (int i = 0; i < instr.getNumOperands(); i++) {
-					for (Object o : instr.getOpObjects(i)) {
-						if (!(o instanceof Scalar s)) {
+				constants.nextInstruction();
+				for (PcodeOp op : instr.getPcode()) {
+					if (op.getOpcode() == PcodeOp.STORE) {
+						Varnode stored = op.getInput(2);
+						Long value = stored.getSize() == 2 ? constants.valueOf(stored) : null;
+						if (value == null) {
 							continue;
 						}
-						long v = s.getUnsignedValue();
-						if (v <= 0xff || v > 0xffff) {
-							continue;
+						long v = value & 0xffff;
+						int port = bigEndian ? (int) v : (int) (((v & 0xff) << 8) | (v >> 8));
+						if ((bigEndian || v > 0xff) && WellKnownPorts.NAMES.containsKey(port)) {
+							addPortEndpoint(instr.getAddress(), port, func,
+								"16-bit constant stored in network byte order in a function that calls " +
+									apis + " (sockaddr heuristic)",
+								Confidence.LOW, link);
 						}
-						int swapped = (int) (((v & 0xff) << 8) | ((v >> 8) & 0xff));
-						if (WellKnownPorts.NAMES.containsKey(swapped)) {
-							String apis = apiNamesIn(entry);
-							addPortEndpoint(instr.getAddress(), swapped, func,
-								"byte-swapped immediate in a function that calls " + apis +
-									" (sockaddr heuristic)",
-								Confidence.LOW, null);
-						}
+						continue;
 					}
+					constants.apply(op);
 				}
 			}
+		}
+	}
+
+	/** Forward propagation of constants through COPY, extension and SUBPIECE PCode within a basic block. */
+	private static final class ConstantTracker {
+		private final Map<String, Long> registers = new HashMap<>();
+		private final Map<String, Long> temporaries = new HashMap<>();
+
+		void clear() {
+			registers.clear();
+			temporaries.clear();
+		}
+
+		void nextInstruction() {
+			temporaries.clear();
+		}
+
+		Long valueOf(Varnode v) {
+			if (v.isConstant()) {
+				return v.getOffset();
+			}
+			return (v.isUnique() ? temporaries : registers).get(key(v));
+		}
+
+		void apply(PcodeOp op) {
+			Varnode out = op.getOutput();
+			if (out == null) {
+				return;
+			}
+			Map<String, Long> target = out.isUnique() ? temporaries : registers;
+			Long value = propagated(op);
+			if (value == null) {
+				target.remove(key(out));
+			}
+			else {
+				target.put(key(out), value);
+			}
+		}
+
+		private Long propagated(PcodeOp op) {
+			int opcode = op.getOpcode();
+			if (opcode != PcodeOp.COPY && opcode != PcodeOp.INT_ZEXT &&
+				opcode != PcodeOp.INT_SEXT && opcode != PcodeOp.SUBPIECE) {
+				return null;
+			}
+			Long value = valueOf(op.getInput(0));
+			if (value == null) {
+				return null;
+			}
+			if (opcode == PcodeOp.SUBPIECE) {
+				value = value >>> (8 * op.getInput(1).getOffset());
+			}
+			int bits = op.getOutput().getSize() * 8;
+			return bits >= 64 ? value : value & ((1L << bits) - 1);
+		}
+
+		private static String key(Varnode v) {
+			return v.getSpace() + ":" + Long.toHexString(v.getOffset());
 		}
 	}
 
@@ -472,11 +541,24 @@ public final class DependencyScanner {
 		Set<String> names = new TreeSet<>();
 		for (Address a : callSitesByFunction.getOrDefault(functionEntry, Set.of())) {
 			CallSiteInfo cs = callSites.get(a);
-			if (cs != null && cs.api().category().equals("socket")) {
+			if (cs != null && cs.api().sockaddr()) {
 				names.add(cs.api().name());
 			}
 		}
 		return String.join("/", names);
+	}
+
+	private static NetworkCallLink chooseDirectLink(Map<Address, NetworkCallLink> candidates) {
+		NetworkCallLink first = null;
+		for (NetworkCallLink link : candidates.values()) {
+			if (!link.heuristic()) {
+				return link;
+			}
+			if (first == null) {
+				first = link;
+			}
+		}
+		return first;
 	}
 
 	// ---------------------------------------------------------------- linkage
@@ -484,6 +566,13 @@ public final class DependencyScanner {
 	private void linkEndpointsToCalls() throws CancelledException {
 		for (EndpointBuilder b : endpoints.values()) {
 			monitor.checkCancelled();
+			if (b.link == null && !b.directLinks.isEmpty()) {
+				b.link = chooseDirectLink(b.directLinks);
+				if (b.directLinks.size() > 1) {
+					b.notes.add("passed to " + b.directLinks.size() +
+						" call sites; the link shows the first by address");
+				}
+			}
 			if (b.link != null) {
 				continue;
 			}
@@ -825,7 +914,7 @@ public final class DependencyScanner {
 			}
 			len++;
 		}
-		if (len == 0 || len >= MAX_RAW_STRING) {
+		if (len == 0 || len >= n) {
 			return null;
 		}
 		return new String(buf, 0, len, StandardCharsets.US_ASCII);

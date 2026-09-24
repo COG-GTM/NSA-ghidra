@@ -17,7 +17,9 @@ package externaldependencyanalyzer;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,6 +36,7 @@ import ghidra.program.model.address.AddressSet;
 import ghidra.program.model.data.TerminatedStringDataType;
 import ghidra.program.model.listing.*;
 import ghidra.program.model.mem.MemoryBlock;
+import ghidra.program.model.symbol.Namespace;
 import ghidra.test.AbstractGhidraHeadlessIntegrationTest;
 import ghidra.util.task.TaskMonitor;
 
@@ -259,22 +262,28 @@ public class ExternalDependencyAnalyzerTest extends AbstractGhidraHeadlessIntegr
 	@Test
 	public void testMemoryLoadsAreNotTreatedAsPointerArguments() throws Exception {
 		// Writable .data holds raw hostname bytes; read-only .rodata holds a pointer to a
-		// second raw hostname that runs to the end of the block with no terminator. Neither
-		// is a defined string, so each can only surface through argument resolution.
+		// second raw hostname whose terminator is the last byte of the block, and a third raw
+		// hostname that runs to the end of the block with no terminator at all. None is a
+		// defined string, so each can only surface through argument resolution.
 		MemoryBlock data = builder.createMemory(".data", "0x403000", 0x100);
 		builder.setWrite(data, true);
 		builder.setBytes("0x403000", ascii("db-shadow.example.test") + " 00");
-		builder.setBytes("0x402100", "e9 21 40 00 00 00 00 00");
-		builder.setBytes("0x4021e9", ascii("db-standby.example.test"));
+		builder.setBytes("0x402100", "e8 21 40 00 00 00 00 00");
+		builder.setBytes("0x4021e8", ascii("db-standby.example.test") + " 00");
+		builder.createMemory(".rodata2", "0x404000", 0x10);
+		builder.setBytes("0x404000", ascii("db.example.test!"));
 
 		// loader at 0x401040:
 		//   mov rdi,[rip+X] -> 0x403000        48 8b 3d disp32   (7 bytes, ends 0x401047)
 		//   call 0x401100                      e8 rel32          (5 bytes, ends 0x40104c)
 		//   mov rdi,[rip+Y] -> 0x402100        48 8b 3d disp32   (7 bytes, ends 0x401053)
 		//   call 0x401100                      e8 rel32          (5 bytes, ends 0x401058)
+		//   lea rdi,[rip+Z] -> 0x404000        48 8d 3d disp32   (7 bytes, ends 0x40105f)
+		//   call 0x401100                      e8 rel32          (5 bytes, ends 0x401064)
 		//   ret                                c3
 		String code = "48 8b 3d " + le32(0x403000 - 0x401047) + "e8 " + le32(0x401100 - 0x40104c) +
-			"48 8b 3d " + le32(0x402100 - 0x401053) + "e8 " + le32(0x401100 - 0x401058) + "c3";
+			"48 8b 3d " + le32(0x402100 - 0x401053) + "e8 " + le32(0x401100 - 0x401058) +
+			"48 8d 3d " + le32(0x404000 - 0x40105f) + "e8 " + le32(0x401100 - 0x401064) + "c3";
 		builder.setBytes("0x401040", code, true);
 		builder.createFunction("0x401040");
 		builder.createLabel("0x401040", "loader");
@@ -303,13 +312,157 @@ public class ExternalDependencyAnalyzerTest extends AbstractGhidraHeadlessIntegr
 				() -> new AssertionError("pointer loaded from read-only memory not resolved: " +
 					values));
 		assertEquals(EndpointKind.HOSTNAME, standby.kind());
-		assertEquals("004021e9", standby.address());
+		assertEquals("004021e8", standby.address());
 		assertEquals(List.of("loader"), standby.referencingFunctions());
 		assertTrue(standby.notes().toString(),
 			standby.notes().contains("passed as argument 0 to PQconnectdb at 00401053"));
 		assertNotNull(standby.nearestNetworkCall());
 		assertEquals("PQconnectdb", standby.nearestNetworkCall().api());
 		assertEquals("00401053", standby.nearestNetworkCall().address());
+
+		// Bytes that run to the end of the block without a terminator are not a string.
+		for (Endpoint e : r.endpoints()) {
+			assertFalse(e.value(), e.value().startsWith("db.example.test"));
+			assertNotEquals("00404000", e.address());
+		}
+		ApiCallSite unterminated = r.apiCallSites().stream().filter(
+			c -> c.address().equals("0040105f")).findFirst().orElseThrow();
+		assertTrue(unterminated.notes().toString(),
+			unterminated.notes().contains("endpoint argument not a constant"));
+	}
+
+	@Test
+	public void testNamespacedFunctionsGetPlateCommentsAndQualifiedNames() throws Exception {
+		Namespace svc = builder.createNamespace("svc");
+		Function main = program.getFunctionManager().getFunctionAt(
+			program.getAddressFactory().getDefaultAddressSpace().getAddress(0x401000));
+		int tx = program.startTransaction("namespace");
+		try {
+			main.setParentNamespace(svc);
+		}
+		finally {
+			program.endTransaction(tx, true);
+		}
+		assertEquals("svc::main", main.getName(true));
+
+		ScanResult r = runAnalyzer(ScanOptions.defaults());
+		Endpoint conn = find(r, EndpointKind.CONNECTION_STRING);
+		assertEquals(List.of("svc::main"), conn.referencingFunctions());
+		assertEquals("svc::main", conn.nearestNetworkCall().function());
+
+		String plate = program.getListing().getComment(CommentType.PLATE, main.getEntryPoint());
+		assertNotNull("plate comment missing on namespaced function", plate);
+		assertTrue(plate, plate.contains("references connection_string"));
+		assertFalse(plate, plate.contains("Tr0ub4dor"));
+	}
+
+	@Test
+	public void testSharedEndpointLinksToFirstCallSiteByAddress() throws Exception {
+		// second at 0x401040 passes the same connection string to PQconnectdb.
+		String code = "48 8d 3d " + le32(0x402000 - 0x401047) + "e8 " + le32(0x401100 - 0x40104c) +
+			"c3";
+		builder.setBytes("0x401040", code, true);
+		builder.createFunction("0x401040");
+		builder.createLabel("0x401040", "second");
+
+		ScanResult r = runAnalyzer(ScanOptions.defaults());
+		Endpoint conn = find(r, EndpointKind.CONNECTION_STRING);
+		assertEquals(List.of("main", "second"), conn.referencingFunctions());
+		assertEquals("00401007", conn.nearestNetworkCall().address());
+		assertEquals("main", conn.nearestNetworkCall().function());
+		assertFalse(conn.nearestNetworkCall().heuristic());
+		assertTrue(conn.notes().toString(), conn.notes().contains(
+			"passed to 2 call sites; the link shows the first by address"));
+		assertTrue(conn.notes().toString(),
+			conn.notes().contains("passed as argument 0 to PQconnectdb at 00401047"));
+	}
+
+	@Test
+	public void testCustomApiTableNotesAppearOnCallSites() throws Exception {
+		File table = createTempFile("apis", ".json");
+		Files.writeString(table.toPath(), "{\"apis\":[{\"name\":\"PQconnectdb\"," +
+			"\"category\":\"database\",\"protocolHint\":\"postgresql\",\"hostArgument\":0," +
+			"\"notes\":\"vendor wrapper; see sustainment runbook\"}]}");
+		ScanResult r = runAnalyzer(ScanOptions.defaults().withApiTablePath(table.getPath()));
+		assertTrue(r.warnings().toString(), r.warnings().isEmpty());
+		List<String> apis = r.apiCallSites().stream().map(ApiCallSite::api).toList();
+		assertEquals(List.of("PQconnectdb"), apis);
+		assertTrue(r.apiCallSites().get(0).notes().toString(),
+			r.apiCallSites().get(0).notes().contains("vendor wrapper; see sustainment runbook"));
+	}
+
+	@Test
+	public void testStoredResultIsInvalidatedByOptionsAndProgramChanges() throws Exception {
+		ScanOptions defaults = ScanOptions.defaults();
+		runAnalyzer(defaults);
+		assertNotNull(ProgramAnnotator.storedResultJson(program, defaults));
+		assertNull(ProgramAnnotator.storedResultJson(program, defaults.withMinStringLength(8)));
+		assertNull(ProgramAnnotator.storedResultJson(program,
+			defaults.withCategories(true, true, true, true, false)));
+
+		File table = createTempFile("apis", ".json");
+		Files.writeString(table.toPath(), "{\"apis\":[{\"name\":\"PQconnectdb\"," +
+			"\"category\":\"database\",\"protocolHint\":\"postgresql\",\"hostArgument\":0}]}");
+		ScanOptions custom = defaults.withApiTablePath(table.getPath());
+		assertNull(ProgramAnnotator.storedResultJson(program, custom));
+		runAnalyzer(custom);
+		assertNotNull(ProgramAnnotator.storedResultJson(program, custom));
+		Files.writeString(table.toPath(), "{\"apis\":[{\"name\":\"PQconnectdb\"," +
+			"\"category\":\"database\",\"protocolHint\":\"postgresql\",\"hostArgument\":0," +
+			"\"notes\":\"edited\"}]}");
+		assertNull("edited table content must invalidate the stored result",
+			ProgramAnnotator.storedResultJson(program, custom));
+
+		runAnalyzer(defaults);
+		assertNotNull(ProgramAnnotator.storedResultJson(program, defaults));
+		builder.setBytes("0x401040", "c3", true);
+		builder.createFunction("0x401040");
+		assertNull("new function must invalidate the stored result",
+			ProgramAnnotator.storedResultJson(program, defaults));
+		runAnalyzer(defaults);
+		assertNotNull(ProgramAnnotator.storedResultJson(program, defaults));
+	}
+
+	@Test
+	public void testSockaddrPortHeuristicIsLimitedToSockaddrCallers() throws Exception {
+		builder.setBytes("0x401120", "c3");
+		builder.disassemble("0x401120", 1);
+		builder.createFunction("0x401120");
+		builder.createLabel("0x401120", "connect");
+
+		// open_socket at 0x401040: mov word ptr [rsp+2],0x901f (htons(8080)); call connect; ret
+		builder.setBytes("0x401040", "66 c7 44 24 02 1f 90 " + "e8 " + le32(0x401120 - 0x40104c) +
+			"c3", true);
+		builder.createFunction("0x401040");
+		builder.createLabel("0x401040", "open_socket");
+		// wide_store at 0x401060: mov dword ptr [rsp+4],0x901f; call connect; ret
+		builder.setBytes("0x401060", "c7 44 24 04 1f 90 00 00 " + "e8 " +
+			le32(0x401120 - 0x40106d) + "c3", true);
+		builder.createFunction("0x401060");
+		builder.createLabel("0x401060", "wide_store");
+		// not_socket at 0x401080: same 16-bit store, but the callee takes no sockaddr
+		builder.setBytes("0x401080", "66 c7 44 24 02 1f 90 " + "e8 " + le32(0x401100 - 0x40108c) +
+			"c3", true);
+		builder.createFunction("0x401080");
+		builder.createLabel("0x401080", "not_socket");
+
+		ScanResult r = runAnalyzer(ScanOptions.defaults());
+		List<Endpoint> ports = r.endpoints().stream().filter(e -> e.kind() == EndpointKind.PORT)
+				.toList();
+		assertEquals(ports.toString(), 1, ports.size());
+		Endpoint port = ports.get(0);
+		assertEquals("8080", port.value());
+		assertEquals("00401040", port.address());
+		assertEquals(List.of("open_socket"), port.referencingFunctions());
+		assertEquals(Confidence.LOW, port.confidence());
+		assertTrue(port.notes().toString(),
+			port.notes().stream().anyMatch(n -> n.contains("sockaddr heuristic") &&
+				n.contains("connect")));
+		assertNotNull(port.nearestNetworkCall());
+		assertEquals("connect", port.nearestNetworkCall().api());
+
+		ScanResult off = runAnalyzer(ScanOptions.defaults().withPortHeuristics(false));
+		assertTrue(off.endpoints().stream().noneMatch(e -> e.kind() == EndpointKind.PORT));
 	}
 
 	private static String ascii(String s) {

@@ -46,8 +46,6 @@ import ghidra.util.Msg;
 
 public class ExportExternalDependencies extends GhidraScript {
 
-	private static final int MAX_NAME_LENGTH = 128;
-
 	@Override
 	protected void run() throws Exception {
 		if (currentProgram == null) {
@@ -99,7 +97,7 @@ public class ExportExternalDependencies extends GhidraScript {
 
 		ScanResult result = null;
 		if (reuse) {
-			String stored = ProgramAnnotator.storedResultJson(currentProgram);
+			String stored = ProgramAnnotator.storedResultJson(currentProgram, options);
 			if (stored != null) {
 				try {
 					result = DependencyReportReader.fromJson(stored);
@@ -109,6 +107,9 @@ public class ExportExternalDependencies extends GhidraScript {
 					Msg.warn(this, "Stored result could not be parsed; rescanning", e);
 				}
 			}
+			else {
+				println("No stored result matches the requested scan; rescanning");
+			}
 		}
 		if (result == null) {
 			result = new DependencyScanner(currentProgram, options, monitor).scan();
@@ -116,7 +117,7 @@ public class ExportExternalDependencies extends GhidraScript {
 		}
 
 		Files.createDirectories(outDir);
-		String base = safeName(currentProgram.getName());
+		String base = OutputNames.safeName(currentProgram.getName());
 		Path json = outDir.resolve(base + "-dependencies.json");
 		Path md = outDir.resolve(base + "-dependencies.md");
 		Files.writeString(json, DependencyReportWriter.toJson(result), StandardCharsets.UTF_8);
@@ -139,26 +140,5 @@ public class ExportExternalDependencies extends GhidraScript {
 		catch (NumberFormatException e) {
 			return ScanOptions.DEFAULT_MIN_STRING_LENGTH;
 		}
-	}
-
-	static String safeName(String name) {
-		StringBuilder sb = new StringBuilder();
-		for (char c : name.toCharArray()) {
-			if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
-				c == '.' || c == '_' || c == '-') {
-				sb.append(c);
-			}
-			else {
-				sb.append('_');
-			}
-			if (sb.length() >= MAX_NAME_LENGTH) {
-				break;
-			}
-		}
-		String s = sb.toString();
-		while (s.startsWith(".")) {
-			s = s.substring(1);
-		}
-		return s.isEmpty() ? "program" : s;
 	}
 }

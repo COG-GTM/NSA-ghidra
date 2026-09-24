@@ -76,13 +76,13 @@
 | API | Category | Address | Function | Protocol | Linkage | Notes |
 |---|---|---|---|---|---|---|
 | `PQconnectdb` | database | `0040121c` | open_database | postgresql | internal | statically linked or stub |
-| `curl_easy_setopt` | http | `00401241` | fetch_capabilities | http | internal | statically linked or stub; option CURLOPT_URL |
-| `curl_easy_setopt` | http | `00401253` | fetch_capabilities | http | internal | statically linked or stub; option CURLOPT_SSL_VERIFYPEER |
-| `curl_easy_setopt` | http | `00401265` | fetch_capabilities | http | internal | statically linked or stub |
-| `SSL_CTX_set_verify` | tls | `0040127e` | disable_tls_checks | tls | internal | statically linked or stub; verify mode 0 (SSL_VERIFY_NONE) |
-| `htons` | socket | `004012af` | open_broker_socket |  | internal | statically linked or stub |
+| `curl_easy_setopt` | http | `00401241` | fetch_capabilities | http | internal | statically linked or stub; CURLOPT_URL identifies the endpoint argument; CURLOPT_SSL_VERIFYPEER=0 is reported as a finding; option CURLOPT_URL |
+| `curl_easy_setopt` | http | `00401253` | fetch_capabilities | http | internal | statically linked or stub; CURLOPT_URL identifies the endpoint argument; CURLOPT_SSL_VERIFYPEER=0 is reported as a finding; option CURLOPT_SSL_VERIFYPEER |
+| `curl_easy_setopt` | http | `00401265` | fetch_capabilities | http | internal | statically linked or stub; CURLOPT_URL identifies the endpoint argument; CURLOPT_SSL_VERIFYPEER=0 is reported as a finding |
+| `SSL_CTX_set_verify` | tls | `0040127e` | disable_tls_checks | tls | internal | statically linked or stub; Mode 0 (SSL_VERIFY_NONE) is reported as a finding; verify mode 0 (SSL_VERIFY_NONE) |
+| `htons` | socket | `004012af` | open_broker_socket |  | internal | statically linked or stub; Port constant argument is recovered |
 | `inet_pton` | resolver | `004012c8` | open_broker_socket |  | internal | statically linked or stub |
-| `connect` | socket | `004012d7` | open_broker_socket | tcp | internal | statically linked or stub |
+| `connect` | socket | `004012d7` | open_broker_socket | tcp | internal | statically linked or stub; BSD socket connect; port comes from the sockaddr argument |
 | `getaddrinfo` | resolver | `00401307` | resolve_tile_hosts | dns | internal | statically linked or stub |
 | `getaddrinfo` | resolver | `00401329` | resolve_tile_hosts | dns | internal | statically linked or stub |
 

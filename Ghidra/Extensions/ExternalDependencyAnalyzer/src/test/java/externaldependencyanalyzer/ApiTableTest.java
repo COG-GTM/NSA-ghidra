@@ -153,6 +153,33 @@ public class ApiTableTest extends AbstractGenericTest {
 	}
 
 	@Test
+	public void testSockaddrFlagAndContentHash() throws IOException {
+		ApiTable t = bundled();
+		for (String api : List.of("connect", "WSAConnect", "bind", "sendto")) {
+			assertTrue(api, t.lookup(api).sockaddr());
+		}
+		for (String api : List.of("htons", "getaddrinfo", "curl_easy_setopt", "PQconnectdb")) {
+			assertFalse(api, t.lookup(api).sockaddr());
+		}
+
+		String a = "{\"apis\":[{\"name\":\"vendor_connect\",\"category\":\"socket\"," +
+			"\"sockaddr\":true}]}";
+		assertTrue(parse(a).lookup("vendor_connect").sockaddr());
+		assertFalse(parse(a.replace(",\"sockaddr\":true", "")).lookup("vendor_connect").sockaddr());
+		assertEquals(parse(a).getContentHash(), parse(a).getContentHash());
+		assertNotEquals(parse(a).getContentHash(),
+			parse(a.replace("vendor_connect", "vendor_connect2")).getContentHash());
+		assertTrue(parse(a).getContentHash().matches("[0-9a-f]{64}"));
+		try {
+			parse(a.replace("true", "\"yes\""));
+			fail("accepted non-boolean sockaddr");
+		}
+		catch (IOException expected) {
+			// rejected as intended
+		}
+	}
+
+	@Test
 	public void testCustomTableNotesAreSanitized() throws IOException {
 		ApiTable t = parse("{\"apis\":[{\"name\":\"vendor_login\",\"category\":\"database\"," +
 			"\"notes\":\"uses password=Tr0ub4dor\\nline2\\u0007 " + "x".repeat(600) + "\"}]}");

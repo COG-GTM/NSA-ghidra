@@ -126,6 +126,23 @@ public class EndpointClassifierTest extends AbstractGenericTest {
 	}
 
 	@Test
+	public void testIpv4MappedIpv6IsClassified() {
+		for (String s : new String[] { "::ffff:10.20.30.40", "0:0:0:0:0:ffff:10.20.30.40",
+			"64:ff9b::203.0.113.5" }) {
+			Candidate c = one(s);
+			assertEquals(s, EndpointKind.IPV6, c.kind());
+			assertEquals(s, c.host());
+			Candidate bracketed = one("[" + s + "]");
+			assertEquals(s, EndpointKind.IPV6, bracketed.kind());
+			assertEquals(s, bracketed.host());
+		}
+		Candidate withPort = one("[::ffff:10.20.30.40]:8080");
+		assertEquals(EndpointKind.HOST_PORT, withPort.kind());
+		assertEquals("[::ffff:10.20.30.40]", withPort.host());
+		assertEquals(8080, withPort.port());
+	}
+
+	@Test
 	public void testBrokerBootstrapAndFileShares() {
 		Candidate kafka = one("kafka1.example.test:9092,kafka2.example.test:9092");
 		assertEquals(EndpointKind.CONNECTION_STRING, kafka.kind());

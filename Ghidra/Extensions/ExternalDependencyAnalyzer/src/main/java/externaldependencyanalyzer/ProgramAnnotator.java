@@ -22,8 +22,7 @@ import ghidra.framework.options.Options;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.address.AddressIterator;
 import ghidra.program.model.listing.*;
-import ghidra.program.model.symbol.Symbol;
-import ghidra.program.model.symbol.SymbolTable;
+import ghidra.util.Msg;
 import ghidra.util.exception.CancelledException;
 import ghidra.util.task.TaskMonitor;
 
@@ -37,6 +36,7 @@ public final class ProgramAnnotator {
 	public static final String PROPERTY_LIST = "External Dependency Summary";
 	public static final String RESULT_JSON_PROPERTY = "Result JSON";
 	public static final String RESULT_JSON_STATUS_PROPERTY = "Result JSON status";
+	public static final String RESULT_FINGERPRINT_PROPERTY = "Result fingerprint";
 	public static final String COMMENT_PREFIX = "[External Dependency]";
 
 	private static final int MAX_STORED_JSON = 8 * 1024 * 1024;
@@ -85,11 +85,12 @@ public final class ProgramAnnotator {
 				}
 			}
 		}
-		if (options.writeComments()) {
-			SymbolTable symbols = program.getSymbolTable();
+		if (options.writeComments() && !byFunction.isEmpty()) {
+			Map<String, Function> functionsByQualifiedName =
+				indexFunctionsByQualifiedName(program, monitor);
 			for (Map.Entry<String, List<String>> fe : byFunction.entrySet()) {
 				monitor.checkCancelled();
-				Function fn = findFunction(program, symbols, fe.getKey());
+				Function fn = functionsByQualifiedName.get(fe.getKey());
 				if (fn == null) {
 					continue;
 				}
@@ -130,20 +131,22 @@ public final class ProgramAnnotator {
 			}
 		}
 
-		writeSummary(program, result);
+		writeSummary(program, result, ScanFingerprint.compute(program, options));
 	}
 
-	private static Function findFunction(Program program, SymbolTable symbols, String name) {
-		FunctionManager fm = program.getFunctionManager();
-		Function fn = null;
-		for (Symbol s : symbols.getSymbols(name)) {
-			Function f = fm.getFunctionAt(s.getAddress());
-			if (f != null &&
-				(fn == null || f.getEntryPoint().compareTo(fn.getEntryPoint()) < 0)) {
-				fn = f;
-			}
+	/**
+	 * Maps the namespace-qualified name used in reports ({@code Function.getName(true)}) back to
+	 * the function; when two functions share a qualified name the lowest entry point wins.
+	 */
+	static Map<String, Function> indexFunctionsByQualifiedName(Program program,
+			TaskMonitor monitor) throws CancelledException {
+		Map<String, Function> byName = new HashMap<>();
+		for (Function f : program.getFunctionManager().getFunctions(true)) {
+			monitor.checkCancelled();
+			byName.merge(f.getName(true), f,
+				(a, b) -> a.getEntryPoint().compareTo(b.getEntryPoint()) <= 0 ? a : b);
 		}
-		return fn;
+		return byName;
 	}
 
 	/** Removes every comment line written by a previous run, keeping analyst-authored lines. */
@@ -188,7 +191,7 @@ public final class ProgramAnnotator {
 		listing.setComment(addr, type, existing + "\n" + line);
 	}
 
-	private static void writeSummary(Program program, ScanResult result) {
+	private static void writeSummary(Program program, ScanResult result, String fingerprint) {
 		Options opts = program.getOptions(PROPERTY_LIST);
 		for (String name : opts.getOptionNames()) {
 			if (name.startsWith("Endpoints by kind.") || name.startsWith("Findings by severity.") ||
@@ -211,13 +214,16 @@ public final class ProgramAnnotator {
 		String json = DependencyReportWriter.toJson(result);
 		if (json.length() <= MAX_STORED_JSON) {
 			opts.setString(RESULT_JSON_PROPERTY, json);
+			opts.setString(RESULT_FINGERPRINT_PROPERTY, fingerprint);
 			if (opts.contains(RESULT_JSON_STATUS_PROPERTY)) {
 				opts.removeOption(RESULT_JSON_STATUS_PROPERTY);
 			}
 		}
 		else {
-			if (opts.contains(RESULT_JSON_PROPERTY)) {
-				opts.removeOption(RESULT_JSON_PROPERTY);
+			for (String name : List.of(RESULT_JSON_PROPERTY, RESULT_FINGERPRINT_PROPERTY)) {
+				if (opts.contains(name)) {
+					opts.removeOption(name);
+				}
 			}
 			opts.setString(RESULT_JSON_STATUS_PROPERTY, "not stored: result exceeds size limit");
 		}
@@ -231,6 +237,26 @@ public final class ProgramAnnotator {
 		}
 		String s = opts.getString(RESULT_JSON_PROPERTY, null);
 		return s == null || s.isBlank() ? null : s;
+	}
+
+	/**
+	 * Returns the stored JSON only when it was produced with the same scan-affecting options, the
+	 * same API table content and the same program state that a scan with {@code options} would
+	 * see now; otherwise null.
+	 */
+	public static String storedResultJson(Program program, ScanOptions options) {
+		String json = storedResultJson(program);
+		if (json == null) {
+			return null;
+		}
+		String stored =
+			program.getOptions(PROPERTY_LIST).getString(RESULT_FINGERPRINT_PROPERTY, null);
+		if (stored == null || !stored.equals(ScanFingerprint.compute(program, options))) {
+			Msg.info(ProgramAnnotator.class,
+				"Stored dependency result does not match the requested scan; rescanning");
+			return null;
+		}
+		return json;
 	}
 
 	private static Address parse(Program program, String s) {

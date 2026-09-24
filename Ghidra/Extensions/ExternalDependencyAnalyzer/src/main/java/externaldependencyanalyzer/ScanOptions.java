@@ -37,6 +37,11 @@ public record ScanOptions(boolean endpoints, boolean connectionStrings, boolean 
 			portHeuristics, minStringLength, path, writeComments, writeBookmarks);
 	}
 
+	public ScanOptions withPortHeuristics(boolean v) {
+		return new ScanOptions(endpoints, connectionStrings, protocolHints, apiCallSites, findings,
+			v, minStringLength, apiTablePath, writeComments, writeBookmarks);
+	}
+
 	public ScanOptions withWriteComments(boolean v) {
 		return new ScanOptions(endpoints, connectionStrings, protocolHints, apiCallSites, findings,
 			portHeuristics, minStringLength, apiTablePath, v, writeBookmarks);

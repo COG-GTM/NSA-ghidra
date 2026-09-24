@@ -21,7 +21,11 @@ Endpoints (kind in parentheses):
   key/value strings, and comma-separated broker bootstrap lists
 - ports passed to `htons()` or stored into a `sockaddr_in` before `connect()`
   (`port`), recovered by PCode constant propagation with an instruction-level
-  fallback
+  fallback. The `sockaddr_in` heuristic only considers a 16-bit constant that
+  the PCode of a function calling `connect`, `bind`, `sendto` or another
+  `sockaddr`-consuming API stores to memory in network byte order, and only
+  when the value is a conventional service port; such ports are reported with
+  `confidence: "low"`
 - UNC, SMB and NFS paths (`unc_path`)
 - HTTP and gRPC path constants (`http_path`), OGC service query fragments and
   other protocol keywords (`service_hint`), `Authorization`, `Bearer` and API key
@@ -126,7 +130,7 @@ Analyzer options:
 | Recover protocol hints | on | HTTP paths, header constants, LDAP names, Kerberos realms, service keywords |
 | Recover API call sites | on | references to APIs in the table |
 | Report findings | on | credential, TLS, plaintext, address and duplicate host findings |
-| Recover ports by sockaddr heuristic | on | port constants stored into a sockaddr before `connect` |
+| Recover ports by sockaddr heuristic | on | 16-bit port constants stored to memory in functions that call a `sockaddr`-consuming API |
 | Minimum string length | 6 | strings shorter than this are ignored (clamped to 2 to 256) |
 | Custom API table path | empty | path to a JSON file that replaces the bundled API table |
 | Write comments | on | EOL and plate comments |
@@ -138,7 +142,9 @@ Analyzer options:
 stored result) and writes `<program>-dependencies.json` and
 `<program>-dependencies.md` into the directory given as its first argument. The
 program name is reduced to `[A-Za-z0-9._-]` and at most 128 characters when
-forming the file names.
+forming the file names; a name that had to be altered gets a `-<8 hex>` suffix
+derived from the original name so that two programs whose names differ only in
+replaced characters do not share an output file.
 
 ```
 support/analyzeHeadless <projectDir> <projectName> \
@@ -151,7 +157,7 @@ Options after the output directory:
 
 | Option | Effect |
 |---|---|
-| `--reuse` | use the result stored by a previous analyzer run when present instead of scanning again |
+| `--reuse` | use the result stored by a previous analyzer run instead of scanning again; the stored result is only reused when its fingerprint (scan options, minimum string length, API table content, executable hash, language, function/instruction/data counts and memory layout) matches the current request, otherwise the program is rescanned |
 | `--api-table=<path>` | analyst-supplied API table replacing the bundled one |
 | `--min-string-length=<n>` | ignore strings shorter than `n` characters (clamped to 2 to 256) |
 | `--no-comments` | do not write comments into the program |
@@ -282,7 +288,8 @@ Fields:
 | `optionArgument` | no | zero-based index of an option selector; `hostArgument` is only used when the option name ends in `_URL` or `_PROXY` |
 | `optionValues` | no | map from selector value (decimal string) to option name; names are `[A-Za-z0-9_]`, at most 64 characters |
 | `verifyModeArgument` | no | zero-based index of a TLS verification mode; 0 is reported as a finding |
-| `notes` | no | free text carried into the report; control characters are collapsed to spaces, the text is truncated to 256 characters and passed through the same credential redaction as recovered strings |
+| `sockaddr` | no | `true` when the API consumes a `sockaddr`; the `sockaddr_in` port heuristic only runs in functions that call such an API |
+| `notes` | no | free text added to the notes of every call site of this API; control characters are collapsed to spaces, the text is truncated to 256 characters and passed through the same credential redaction as recovered strings |
 
 Argument indexes must be between 0 and 31 and refer to the program's default
 calling convention; register arguments only. A custom table larger than 4 MiB or

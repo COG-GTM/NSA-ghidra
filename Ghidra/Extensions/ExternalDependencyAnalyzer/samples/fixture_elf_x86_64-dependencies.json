@@ -168,6 +168,7 @@
       "external": false,
       "notes": [
         "statically linked or stub",
+        "CURLOPT_URL identifies the endpoint argument; CURLOPT_SSL_VERIFYPEER=0 is reported as a finding",
         "option CURLOPT_URL"
       ]
     },
@@ -180,6 +181,7 @@
       "external": false,
       "notes": [
         "statically linked or stub",
+        "CURLOPT_URL identifies the endpoint argument; CURLOPT_SSL_VERIFYPEER=0 is reported as a finding",
         "option CURLOPT_SSL_VERIFYPEER"
       ]
     },
@@ -191,7 +193,8 @@
       "protocolHint": "http",
       "external": false,
       "notes": [
-        "statically linked or stub"
+        "statically linked or stub",
+        "CURLOPT_URL identifies the endpoint argument; CURLOPT_SSL_VERIFYPEER=0 is reported as a finding"
       ]
     },
     {
@@ -203,6 +206,7 @@
       "external": false,
       "notes": [
         "statically linked or stub",
+        "Mode 0 (SSL_VERIFY_NONE) is reported as a finding",
         "verify mode 0 (SSL_VERIFY_NONE)"
       ]
     },
@@ -214,7 +218,8 @@
       "protocolHint": "",
       "external": false,
       "notes": [
-        "statically linked or stub"
+        "statically linked or stub",
+        "Port constant argument is recovered"
       ]
     },
     {
@@ -236,7 +241,8 @@
       "protocolHint": "tcp",
       "external": false,
       "notes": [
-        "statically linked or stub"
+        "statically linked or stub",
+        "BSD socket connect; port comes from the sockaddr argument"
       ]
     },
     {

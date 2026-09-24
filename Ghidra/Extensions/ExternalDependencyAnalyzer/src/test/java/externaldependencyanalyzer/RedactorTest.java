@@ -31,6 +31,46 @@ public class RedactorTest extends AbstractGenericTest {
 	}
 
 	@Test
+	public void testBareUriUserinfoIsMasked() {
+		Redactor.Result r = Redactor.redact("https://ghp_0123456789abcdef@git.example.test/org/repo.git");
+		assertTrue(r.redacted());
+		assertEquals("https://" + Redactor.MASK + "@git.example.test/org/repo.git", r.text());
+
+		r = Redactor.redact("amqp://guest:guest@broker.example.test:5672/vhost");
+		assertEquals("amqp://guest:" + Redactor.MASK + "@broker.example.test:5672/vhost", r.text());
+		assertEquals(1, r.text().split("\\*\\*\\*", -1).length - 1);
+
+		assertFalse(Redactor.redact("svc/host@EXAMPLE.TEST").redacted());
+	}
+
+	@Test
+	public void testUrlQueryCredentialsAreMasked() {
+		String[][] cases = {
+			{ "https://auth.example.test/oauth/token?client_id=web&client_secret=s3cret-Value",
+				"s3cret-Value", "client_id=web" },
+			{ "https://maps.example.test/tiles?zoom=3&key=AIzaFAKEKEY0123", "AIzaFAKEKEY0123",
+				"zoom=3" },
+			{ "https://acct.blob.example.test/c/b?sv=2020-08-04&sig=abc%2Fdef123", "abc%2Fdef123",
+				"sv=2020-08-04" },
+			{ "https://api.example.test/v1?access_token=ya29.tok&format=json", "ya29.tok",
+				"format=json" },
+			{ "Endpoint=sb://ns.example.test/;SharedAccessKeyName=root;SharedAccessKey=Zm9v=",
+				"Zm9v=", "SharedAccessKeyName=root" },
+			{ "https://api.example.test/items?pass=hunter22&page=2", "hunter22", "page=2" },
+		};
+		for (String[] c : cases) {
+			Redactor.Result r = Redactor.redact(c[0]);
+			assertTrue(c[0], r.redacted());
+			assertFalse(r.text(), r.text().contains(c[1]));
+			assertTrue(r.text(), r.text().contains(c[2]));
+			assertTrue(r.text(), r.text().contains(Redactor.MASK));
+		}
+		assertEquals("https://auth.example.test/oauth/token?client_id=web&client_secret=" + Redactor.MASK,
+			Redactor.redact(
+				"https://auth.example.test/oauth/token?client_id=web&client_secret=s3cret-Value").text());
+	}
+
+	@Test
 	public void testKeyValuePasswordIsMasked() {
 		Redactor.Result r = Redactor.redact("host=db.example.test user=app password=hunter22 dbname=ops");
 		assertTrue(r.redacted());
