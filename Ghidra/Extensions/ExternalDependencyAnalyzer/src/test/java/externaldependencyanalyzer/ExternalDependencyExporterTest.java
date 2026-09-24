@@ -279,7 +279,7 @@ public class ExternalDependencyExporterTest extends AbstractGhidraHeadlessIntegr
 
 		| From | Category | Severity | Kind | Value | Library | Indicator | Function | Via thunk |
 		| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-		| 00001004 | jdbc | HIGH | string | jdbc:postgresql://db.internal.example.com:5432/appdb?user=svc&password=***REDACTED*** | - | 00002300 | connect_db | false |
+		| 00001004 | jdbc | HIGH | string | jdbc:postgresql://db.internal.example.com:5432/appdb?user=svc&amp;password=***REDACTED*** | - | 00002300 | connect_db | false |
 		| 00001008 | endpoint | LOW | string | db.internal.example.com | - | 00002000 | connect_db | false |
 		| 0000100c | endpoint | LOW | string | :5432 | - | 00002180 | connect_db | false |
 		| 00001010 | jdbc | HIGH | import | PQconnectdb | libpq.so.5 | EXTERNAL:00000003 | connect_db | false |
@@ -328,6 +328,16 @@ public class ExternalDependencyExporterTest extends AbstractGhidraHeadlessIntegr
 		List<DependencyFinding> findings = scan();
 		String markdown = ExternalDependencyExporter.toMarkdown(program, findings);
 		assertEquals(MARKDOWN_GOLDEN, markdown);
+	}
+
+	@Test
+	public void testMarkdownEscaping() {
+		DependencyFinding finding = new DependencyFinding(DependencyCategory.HTTP, "string",
+			"https://api.example.com/\norders<b>", null, fixture.getBuilder().addr("0x2100"),
+			fixture.getBuilder().addr("0x1094"), null, false);
+		String markdown = ExternalDependencyExporter.toMarkdown(program, List.of(finding));
+		assertTrue(markdown.contains("https://api.example.com/\\norders&lt;b&gt;"));
+		assertEquals(3, markdown.lines().filter(line -> line.startsWith("| ")).count());
 	}
 
 	@Test
@@ -403,6 +413,11 @@ public class ExternalDependencyExporterTest extends AbstractGhidraHeadlessIntegr
 			DependencyRules.classifyString("http://example.com:5672"));
 		assertEquals(DependencyCategory.QUEUE,
 			DependencyRules.classifyString("amqp://x:5672"));
+		assertEquals(null, DependencyRules.classifyString("Log request failed:5672"));
+		assertEquals(DependencyCategory.QUEUE,
+			DependencyRules.classifyString("mq.example.com:5672"));
+		assertEquals(DependencyCategory.QUEUE,
+			DependencyRules.classifyString(":5672"));
 		assertEquals(DependencyCategory.ENDPOINT,
 			DependencyRules.classifyString(ExternalDependencyFixture.PORT_5432));
 		assertEquals(DependencyCategory.JDBC,
@@ -420,6 +435,10 @@ public class ExternalDependencyExporterTest extends AbstractGhidraHeadlessIntegr
 			DependencyRules.redact("password=REDACTME"));
 		assertEquals("jdbc:x://h/db?user=u&password=***REDACTED***&ssl=true",
 			DependencyRules.redact("jdbc:x://h/db?user=u&password=two words&ssl=true"));
+		assertEquals("jdbc:postgresql://h/db?sslpassword=***REDACTED***&user=u",
+			DependencyRules.redact("jdbc:postgresql://h/db?sslpassword=abc&user=u"));
+		assertEquals("https://api.example.com/cb#access_token=***REDACTED***",
+			DependencyRules.redact("https://api.example.com/cb#access_token=abc"));
 		assertEquals("Authorization: Bearer ***REDACTED***",
 			DependencyRules.redact(ExternalDependencyFixture.AUTHORIZATION));
 		assertEquals("X-Api-Key: ***REDACTED***",

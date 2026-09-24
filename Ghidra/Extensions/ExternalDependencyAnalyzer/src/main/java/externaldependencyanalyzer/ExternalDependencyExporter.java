@@ -70,7 +70,7 @@ public class ExternalDependencyExporter {
 		Collections.sort(sorted);
 		StringBuilder out = new StringBuilder();
 		out.append("# External Dependency Report\n\n");
-		out.append("Program: ").append(program.getName()).append("\n\n");
+		out.append("Program: ").append(markdown(program.getName())).append("\n\n");
 		out.append("| From | Category | Severity | Kind | Value | Library | Indicator | Function | Via thunk |\n");
 		out.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
 		for (DependencyFinding finding : sorted) {
@@ -89,7 +89,12 @@ public class ExternalDependencyExporter {
 	}
 
 	private static String markdown(String value) {
-		return value.replace("|", "\\|");
+		return value.replace("&", "&amp;")
+			.replace("<", "&lt;")
+			.replace(">", "&gt;")
+			.replace("|", "\\|")
+			.replace("\r", "\\r")
+			.replace("\n", "\\n");
 	}
 
 	private static String jsonNullable(String value) {

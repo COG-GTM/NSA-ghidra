@@ -102,6 +102,11 @@ public class ExternalDependencyScanner {
 					importedName = location.getLabel();
 				}
 				DependencyCategory category = DependencyRules.classifyImport(importedName);
+				if (category == null && importedName != null &&
+					!importedName.equals(location.getLabel())) {
+					importedName = location.getLabel();
+					category = DependencyRules.classifyImport(importedName);
+				}
 				if (category == null) {
 					continue;
 				}

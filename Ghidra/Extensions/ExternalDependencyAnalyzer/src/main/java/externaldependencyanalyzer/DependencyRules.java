@@ -73,11 +73,13 @@ final class DependencyRules {
 		if (HTTP.matcher(s).find()) {
 			return DependencyCategory.HTTP;
 		}
-		if (s.matches("(?i)^(?:mq|rabbitmq|kafka)\\..*") || QUEUE_PORT.matcher(s).find()) {
+		boolean endpointShaped = BARE_PORT.matcher(s).matches() || IPV4.matcher(s).matches() ||
+			isHostname(s);
+		if (endpointShaped &&
+			(s.matches("(?i)^(?:mq|rabbitmq|kafka)\\..*") || QUEUE_PORT.matcher(s).find())) {
 			return DependencyCategory.QUEUE;
 		}
-		if (BARE_PORT.matcher(s).matches() || IPV4.matcher(s).matches() ||
-			isHostname(s)) {
+		if (endpointShaped) {
 			return DependencyCategory.ENDPOINT;
 		}
 		return null;
@@ -126,7 +128,7 @@ final class DependencyRules {
 			return null;
 		}
 		return s.replaceAll(
-			"(?i)((?:^|[?&;,\\s])(?:password|pwd|passwd|secret|api_?key|access_token|token)=)[^&;]+",
+			"(?i)((?:^|[?&;,#\\s])[a-z0-9_-]*(?:password|passwd|pwd|secret|api_?key|access_token|token)=)[^&;]+",
 			"$1" + REDACTION_MARKER)
 			.replaceAll("(?i)((?:authorization\\s*:\\s*)?(?:bearer|basic)\\s+)\\S+",
 				"$1" + REDACTION_MARKER)
