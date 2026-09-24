@@ -35,7 +35,8 @@ public class OutputNamesTest extends AbstractGenericTest {
 
 	@Test
 	public void testAlteredNamesAreAsciiBoundedAndDistinct() {
-		List<String> names = List.of("svc a", "svc/a", "svc:a", "svc_a", "svc\u00e4", "svc\u00f6",
+		List<String> names = List.of("svc a", "svc/a", "svc:a", "svc$a", "svc_a", "svc\u00e4",
+			"svc\u00f6", "caf\u00e9", "cafe",
 			"..hidden", "hidden", "   ", "", "a".repeat(200) + "x", "a".repeat(200) + "y",
 			"a".repeat(128), "a".repeat(129));
 		Set<String> seen = new HashSet<>();

@@ -40,6 +40,9 @@ public class RedactorTest extends AbstractGenericTest {
 		assertEquals("amqp://guest:" + Redactor.MASK + "@broker.example.test:5672/vhost", r.text());
 		assertEquals(1, r.text().split("\\*\\*\\*", -1).length - 1);
 
+		r = Redactor.redact("mongodb://s3ssionT0ken@mongo.example.test:27017/ops");
+		assertEquals("mongodb://" + Redactor.MASK + "@mongo.example.test:27017/ops", r.text());
+
 		assertFalse(Redactor.redact("svc/host@EXAMPLE.TEST").redacted());
 	}
 
@@ -57,6 +60,8 @@ public class RedactorTest extends AbstractGenericTest {
 			{ "Endpoint=sb://ns.example.test/;SharedAccessKeyName=root;SharedAccessKey=Zm9v=",
 				"Zm9v=", "SharedAccessKeyName=root" },
 			{ "https://api.example.test/items?pass=hunter22&page=2", "hunter22", "page=2" },
+			{ "jdbc:sqlserver://db.example.test:1433;databaseName=ops;user=svc;password=Pa55;encrypt=true",
+				"Pa55", "encrypt=true" },
 		};
 		for (String[] c : cases) {
 			Redactor.Result r = Redactor.redact(c[0]);
