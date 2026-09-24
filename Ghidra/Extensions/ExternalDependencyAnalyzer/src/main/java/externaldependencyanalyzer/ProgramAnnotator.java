@@ -135,15 +135,15 @@ public final class ProgramAnnotator {
 	}
 
 	/**
-	 * Maps the namespace-qualified name used in reports ({@code Function.getName(true)}) back to
-	 * the function; when two functions share a qualified name the lowest entry point wins.
+	 * Maps the name used in reports ({@link DependencyScanner#functionName}) back to the
+	 * function; when two functions share a reported name the lowest entry point wins.
 	 */
 	static Map<String, Function> indexFunctionsByQualifiedName(Program program,
 			TaskMonitor monitor) throws CancelledException {
 		Map<String, Function> byName = new HashMap<>();
 		for (Function f : program.getFunctionManager().getFunctions(true)) {
 			monitor.checkCancelled();
-			byName.merge(f.getName(true), f,
+			byName.merge(DependencyScanner.functionName(f), f,
 				(a, b) -> a.getEntryPoint().compareTo(b.getEntryPoint()) <= 0 ? a : b);
 		}
 		return byName;

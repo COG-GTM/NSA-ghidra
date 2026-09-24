@@ -67,7 +67,7 @@
 | connection_string | `postgresql://svc_user:***@db.example-geo.internal:5432/tiles` | `00402008` | open_database | `PQconnectdb` @ `0040121c` | high | postgresql | credential redacted; passed as argument 0 to PQconnectdb at 0040121c |
 | url | `http://tiles.example-geo.internal/wms?SERVICE=WMS&REQUEST=GetCapabilities` | `00402050` | fetch_capabilities | `curl_easy_setopt` @ `00401241` | high | ogc/wms | OGC web service request; passed as argument 2 to curl_easy_setopt at 00401241 |
 | hostname | `tiles-standby.example-geo.internal` | `004020a0` | resolve_tile_hosts | `getaddrinfo` @ `00401329` | high |  | passed as argument 0 to getaddrinfo at 00401329 |
-| header_constant | `Authorization: ***` | `004020c3` | fetch_capabilities | `curl_easy_setopt` @ `00401265` | high | http-auth | HTTP authentication header; credential redacted; passed as argument 2 to curl_easy_setopt at 00401265 |
+| header_constant | `Authorization: ***` | `004020c3` | fetch_capabilities | `curl_easy_setopt` @ `00401265` (heuristic) | high | http-auth | HTTP authentication header; credential redacted; nearest call in same function (heuristic) |
 | ipv4 | `10.20.30.40` | `004020d9` | open_broker_socket | `inet_pton` @ `004012c8` | high |  | passed as argument 1 to inet_pton at 004012c8 |
 | hostname | `tiles.example-geo.internal` | `004020eb` | resolve_tile_hosts | `getaddrinfo` @ `00401307` | high |  | passed as argument 0 to getaddrinfo at 00401307 |
 
@@ -78,7 +78,7 @@
 | `PQconnectdb` | database | `0040121c` | open_database | postgresql | internal | statically linked or stub |
 | `curl_easy_setopt` | http | `00401241` | fetch_capabilities | http | internal | statically linked or stub; CURLOPT_URL identifies the endpoint argument; CURLOPT_SSL_VERIFYPEER=0 is reported as a finding; option CURLOPT_URL |
 | `curl_easy_setopt` | http | `00401253` | fetch_capabilities | http | internal | statically linked or stub; CURLOPT_URL identifies the endpoint argument; CURLOPT_SSL_VERIFYPEER=0 is reported as a finding; option CURLOPT_SSL_VERIFYPEER |
-| `curl_easy_setopt` | http | `00401265` | fetch_capabilities | http | internal | statically linked or stub; CURLOPT_URL identifies the endpoint argument; CURLOPT_SSL_VERIFYPEER=0 is reported as a finding |
+| `curl_easy_setopt` | http | `00401265` | fetch_capabilities | http | internal | statically linked or stub; CURLOPT_URL identifies the endpoint argument; CURLOPT_SSL_VERIFYPEER=0 is reported as a finding; option 10018 not in API table |
 | `SSL_CTX_set_verify` | tls | `0040127e` | disable_tls_checks | tls | internal | statically linked or stub; Mode 0 (SSL_VERIFY_NONE) is reported as a finding; verify mode 0 (SSL_VERIFY_NONE) |
 | `htons` | socket | `004012af` | open_broker_socket |  | internal | statically linked or stub; Port constant argument is recovered |
 | `inet_pton` | resolver | `004012c8` | open_broker_socket |  | internal | statically linked or stub |

@@ -117,7 +117,7 @@ public class ExportExternalDependencies extends GhidraScript {
 		}
 
 		Files.createDirectories(outDir);
-		String base = OutputNames.safeName(currentProgram.getName());
+		String base = OutputNames.safeName(result.program().name());
 		Path json = outDir.resolve(base + "-dependencies.json");
 		Path md = outDir.resolve(base + "-dependencies.md");
 		Files.writeString(json, DependencyReportWriter.toJson(result), StandardCharsets.UTF_8);

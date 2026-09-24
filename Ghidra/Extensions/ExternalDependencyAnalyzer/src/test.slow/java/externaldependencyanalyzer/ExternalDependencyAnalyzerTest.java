@@ -37,6 +37,8 @@ import ghidra.program.model.data.TerminatedStringDataType;
 import ghidra.program.model.listing.*;
 import ghidra.program.model.mem.MemoryBlock;
 import ghidra.program.model.symbol.Namespace;
+import ghidra.program.model.symbol.RefType;
+import ghidra.program.model.symbol.SourceType;
 import ghidra.test.AbstractGhidraHeadlessIntegrationTest;
 import ghidra.util.task.TaskMonitor;
 
@@ -421,6 +423,138 @@ public class ExternalDependencyAnalyzerTest extends AbstractGhidraHeadlessIntegr
 			ProgramAnnotator.storedResultJson(program, defaults));
 		runAnalyzer(defaults);
 		assertNotNull(ProgramAnnotator.storedResultJson(program, defaults));
+	}
+
+	@Test
+	public void testStoredResultIsInvalidatedByInPlaceEdits() throws Exception {
+		ScanOptions defaults = ScanOptions.defaults();
+		runAnalyzer(defaults);
+		assertNotNull(ProgramAnnotator.storedResultJson(program, defaults));
+		int functions = program.getFunctionManager().getFunctionCount();
+		long instructions = program.getListing().getNumInstructions();
+		long data = program.getListing().getNumDefinedData();
+
+		// Same-length patch of one byte inside the defined URL string.
+		builder.setBytes("0x402087", "7a");
+		assertNull("patched string bytes must invalidate the stored result",
+			ProgramAnnotator.storedResultJson(program, defaults));
+		runAnalyzer(defaults);
+		assertNotNull(ProgramAnnotator.storedResultJson(program, defaults));
+
+		Address mainAddr = program.getAddressFactory().getDefaultAddressSpace().getAddress(0x401000);
+		int tx = program.startTransaction("rename");
+		try {
+			program.getFunctionManager().getFunctionAt(mainAddr).setName("service_entry",
+				SourceType.USER_DEFINED);
+		}
+		finally {
+			program.endTransaction(tx, true);
+		}
+		assertNull("renamed function must invalidate the stored result",
+			ProgramAnnotator.storedResultJson(program, defaults));
+		runAnalyzer(defaults);
+		assertNotNull(ProgramAnnotator.storedResultJson(program, defaults));
+
+		Address from = program.getAddressFactory().getDefaultAddressSpace().getAddress(0x401100);
+		Address to = program.getAddressFactory().getDefaultAddressSpace().getAddress(0x402000);
+		tx = program.startTransaction("reference");
+		try {
+			program.getReferenceManager().addMemoryReference(from, to, RefType.DATA,
+				SourceType.USER_DEFINED, 0);
+		}
+		finally {
+			program.endTransaction(tx, true);
+		}
+		assertNull("added reference must invalidate the stored result",
+			ProgramAnnotator.storedResultJson(program, defaults));
+		runAnalyzer(defaults);
+		assertNotNull(ProgramAnnotator.storedResultJson(program, defaults));
+
+		assertEquals(functions, program.getFunctionManager().getFunctionCount());
+		assertEquals(instructions, program.getListing().getNumInstructions());
+		assertEquals(data, program.getListing().getNumDefinedData());
+	}
+
+	@Test
+	public void testUnresolvedOrUnlistedOptionSelectorDoesNotReadPointerArgument() throws Exception {
+		builder.setBytes("0x402100", ascii("http://ignored.example.test/x") + " 00");
+
+		// setter at 0x401040:
+		//   mov esi,0x2a (not in the table)     be 2a 00 00 00    (5 bytes, ends 0x401045)
+		//   lea rdx,[rip+X] -> 0x402100         48 8d 15 disp32   (7 bytes, ends 0x40104c)
+		//   call 0x401110                       e8 rel32          (5 bytes, ends 0x401051)
+		//   mov esi,edi (selector from caller)  89 fe             (2 bytes, ends 0x401053)
+		//   lea rdx,[rip+Y] -> 0x402100         48 8d 15 disp32   (7 bytes, ends 0x40105a)
+		//   call 0x401110                       e8 rel32          (5 bytes, ends 0x40105f)
+		//   ret                                 c3
+		String code = "be 2a 00 00 00 " + "48 8d 15 " + le32(0x402100 - 0x40104c) + "e8 " +
+			le32(0x401110 - 0x401051) + "89 fe " + "48 8d 15 " + le32(0x402100 - 0x40105a) +
+			"e8 " + le32(0x401110 - 0x40105f) + "c3";
+		builder.setBytes("0x401040", code, true);
+		builder.createFunction("0x401040");
+		builder.createLabel("0x401040", "setter");
+
+		ScanResult r = runAnalyzer(ScanOptions.defaults());
+		ApiCallSite unlisted = r.apiCallSites().stream().filter(
+			c -> c.address().equals("0040104c")).findFirst().orElseThrow();
+		assertTrue(unlisted.notes().toString(),
+			unlisted.notes().contains("option 42 not in API table"));
+		ApiCallSite unresolved = r.apiCallSites().stream().filter(
+			c -> c.address().equals("0040105a")).findFirst().orElseThrow();
+		assertTrue(unresolved.notes().toString(),
+			unresolved.notes().contains("option selector not a constant"));
+		for (ApiCallSite c : List.of(unlisted, unresolved)) {
+			assertFalse(c.notes().toString(),
+				c.notes().contains("endpoint argument not a constant"));
+		}
+		// Neither call is treated as passing the pointer argument: if the string surfaces at
+		// all it is through the string scan, linked only heuristically.
+		for (Endpoint e : r.endpoints()) {
+			assertTrue(e.notes().toString(), e.notes().stream().noneMatch(
+				n -> n.contains("to curl_easy_setopt at 0040104c") ||
+					n.contains("to curl_easy_setopt at 0040105a")));
+			if (e.value().contains("ignored.example.test")) {
+				assertTrue(e.notes().toString(),
+					e.notes().stream().noneMatch(n -> n.startsWith("passed as argument")));
+				assertTrue(e.toString(),
+					e.nearestNetworkCall() == null || e.nearestNetworkCall().heuristic());
+			}
+		}
+		assertTrue(r.findings().stream().noneMatch(
+			f -> f.rule().equals(Rule.RUNTIME_SUPPLIED_ENDPOINT.jsonName()) &&
+				f.function().equals("setter")));
+		// The genuine CURLOPT_URL call in main is unaffected.
+		Endpoint url = r.endpoints().stream().filter(e -> e.value().equals(URL)).findFirst()
+				.orElseThrow();
+		assertEquals(Confidence.HIGH, url.confidence());
+		assertEquals("00401018", url.nearestNetworkCall().address());
+		assertFalse(url.nearestNetworkCall().heuristic());
+	}
+
+	@Test
+	public void testProgramNameIsRedacted() throws Exception {
+		ProgramBuilder named = new ProgramBuilder("svc password=Hunter22Secret", ProgramBuilder._X64,
+			"gcc", this);
+		try {
+			named.createMemory(".text", "0x401000", 0x10);
+			named.setBytes("0x401000", "c3", true);
+			named.createFunction("0x401000");
+			ProgramDB p = named.getProgram();
+			int tx = p.startTransaction("scan");
+			ScanResult r;
+			try {
+				r = new DependencyScanner(p, ScanOptions.defaults(), TaskMonitor.DUMMY).scan();
+			}
+			finally {
+				p.endTransaction(tx, true);
+			}
+			assertEquals("svc password=" + Redactor.MASK, r.program().name());
+			assertFalse(DependencyReportWriter.toJson(r).contains("Hunter22Secret"));
+			assertFalse(DependencyReportWriter.toMarkdown(r).contains("Hunter22Secret"));
+		}
+		finally {
+			named.dispose();
+		}
 	}
 
 	@Test

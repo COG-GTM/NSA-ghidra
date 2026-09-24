@@ -280,12 +280,12 @@ Fields:
 
 | Field | Required | Meaning |
 |---|---|---|
-| `name` | yes | symbol name; `[A-Za-z0-9_@.$?]`, at most 255 characters. Leading underscores, `__imp_` prefixes, `@n` decorations, Windows `A`/`W` suffixes and Ghidra `_0` duplicates are stripped from program symbols before matching |
+| `name` | yes | symbol name; `[A-Za-z0-9_@.$?]`, at most 255 characters. Leading underscores, `__imp_` prefixes, `@n` decorations, Windows `A`/`W` suffixes and Ghidra `_N` duplicate suffixes (also combined, as in `InternetOpenUrlA_0`) are stripped from program symbols before matching |
 | `category` | no | `[a-z0-9_-]`, at most 32 characters; used for grouping (default `other`) |
 | `protocolHint` | no | protocol attributed to endpoints resolved at this call; `[A-Za-z0-9_./+-]`, at most 64 characters |
 | `hostArgument` | no | zero-based index of a pointer argument to a string endpoint |
 | `portArgument` | no | zero-based index of an integer port argument |
-| `optionArgument` | no | zero-based index of an option selector; `hostArgument` is only used when the option name ends in `_URL` or `_PROXY` |
+| `optionArgument` | no | zero-based index of an option selector; `hostArgument` is only used when the selector resolves to a constant whose option name ends in `_URL` or `_PROXY`; an unresolved or unlisted selector is noted on the call site and the pointer argument is not read |
 | `optionValues` | no | map from selector value (decimal string) to option name; names are `[A-Za-z0-9_]`, at most 64 characters |
 | `verifyModeArgument` | no | zero-based index of a TLS verification mode; 0 is reported as a finding |
 | `sockaddr` | no | `true` when the API consumes a `sockaddr`; the `sockaddr_in` port heuristic only runs in functions that call such an API |

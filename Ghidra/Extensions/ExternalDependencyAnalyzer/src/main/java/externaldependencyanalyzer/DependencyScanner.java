@@ -329,16 +329,18 @@ public final class DependencyScanner {
 			if (api.hasOptionArgument()) {
 				ArgumentResolver.Resolved opt = resolver.resolve(instr, cs.function(),
 					api.optionArgument());
-				if (opt != null) {
+				if (opt == null) {
+					cs.notes().add("option selector not a constant");
+				}
+				else {
 					optionName = api.optionValues().get(opt.value());
-					if (optionName != null) {
-						cs.notes().add("option " + optionName);
-					}
+					cs.notes().add(optionName != null ? "option " + optionName
+							: "option " + opt.value() + " not in API table");
 				}
 			}
 			if (api.hasHostArgument()) {
-				boolean urlOption = optionName == null || optionName.endsWith("_URL") ||
-					optionName.endsWith("_PROXY");
+				boolean urlOption = optionName != null &&
+					(optionName.endsWith("_URL") || optionName.endsWith("_PROXY"));
 				if (!api.hasOptionArgument() || urlOption) {
 					ArgumentResolver.Resolved host = resolver.resolve(instr, cs.function(),
 						api.hostArgument());
@@ -863,15 +865,16 @@ public final class DependencyScanner {
 		String sha = program.getExecutableSHA256();
 		String format = program.getExecutableFormat();
 		Address base = program.getImageBase();
-		return new ProgramInfo(program.getName(), sha == null ? "" : sha,
+		return new ProgramInfo(Redactor.redact(program.getName()).text(), sha == null ? "" : sha,
 			format == null ? "" : format, program.getLanguageID().getIdAsString(),
 			base == null ? "" : "0x" + Long.toHexString(base.getOffset()));
 	}
 
 	// ---------------------------------------------------------------- helpers
 
-	private static String functionName(Function f) {
-		return f.getName(true);
+	/** Namespace-qualified function name as it appears in every report field. */
+	static String functionName(Function f) {
+		return Redactor.redact(f.getName(true)).text();
 	}
 
 	private Address toMemoryAddress(long value) {

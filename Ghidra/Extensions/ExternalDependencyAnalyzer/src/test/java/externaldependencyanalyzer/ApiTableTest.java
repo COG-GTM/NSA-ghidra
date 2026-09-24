@@ -113,6 +113,12 @@ public class ApiTableTest extends AbstractGenericTest {
 		assertNotNull(t.lookup("connect@GLIBC_2.2.5"));
 		assertNotNull(t.lookup("connect@@GLIBC_2.2.5"));
 		assertNotNull(t.lookup("InternetOpenUrlA"));
+		assertNotNull(t.lookup("InternetOpenUrlA_0"));
+		assertNotNull(t.lookup("InternetOpenUrlW_12"));
+		assertNotNull(t.lookup("connect_1"));
+		assertNotNull(t.lookup("__imp_WinHttpConnect_0"));
+		assertNull(t.lookup("_0"));
+		assertNull(t.lookup("not_a_network_api_0"));
 		assertNull(t.lookup("not_a_network_api"));
 		assertNull(t.lookup(null));
 		assertNull(t.lookup(""));

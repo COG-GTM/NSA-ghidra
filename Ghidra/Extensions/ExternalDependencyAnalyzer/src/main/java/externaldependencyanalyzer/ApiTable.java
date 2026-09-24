@@ -20,6 +20,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.gson.*;
 
@@ -38,6 +40,7 @@ public final class ApiTable {
 	private static final int MAX_FILE_BYTES = 4 * 1024 * 1024;
 	private static final int MAX_NOTES_LENGTH = 256;
 	private static final List<String> DECORATIONS = List.of("imp_", "thunk_");
+	private static final Pattern DUPLICATE_SUFFIX = Pattern.compile("_\\d+$");
 
 	/** One recognised API. Argument indices are zero-based; -1 means "not applicable". */
 	public record ApiEntry(String name, String category, String protocolHint, String notes,
@@ -87,24 +90,33 @@ public final class ApiTable {
 		return byName.size();
 	}
 
-	/** Looks up a symbol name, tolerating leading underscores, {@code A}/{@code W} suffixes and PLT/thunk decorations. */
+	/**
+	 * Looks up a symbol name, tolerating leading underscores, {@code A}/{@code W} suffixes,
+	 * PLT/thunk decorations and the {@code _N} suffix Ghidra appends to duplicate symbols.
+	 */
 	public ApiEntry lookup(String symbolName) {
 		if (symbolName == null) {
 			return null;
 		}
 		String n = normalize(symbolName);
+		ApiEntry e = lookupWithCharsetSuffix(n);
+		if (e != null) {
+			return e;
+		}
+		Matcher dup = DUPLICATE_SUFFIX.matcher(n);
+		if (dup.find() && dup.start() > 0) {
+			return lookupWithCharsetSuffix(n.substring(0, dup.start()));
+		}
+		return null;
+	}
+
+	private ApiEntry lookupWithCharsetSuffix(String n) {
 		ApiEntry e = byName.get(n);
 		if (e != null) {
 			return e;
 		}
 		if (n.length() > 1 && (n.endsWith("A") || n.endsWith("W"))) {
-			e = byName.get(n.substring(0, n.length() - 1));
-			if (e != null) {
-				return e;
-			}
-		}
-		if (n.endsWith("_0")) {
-			return byName.get(n.substring(0, n.length() - 2));
+			return byName.get(n.substring(0, n.length() - 1));
 		}
 		return null;
 	}

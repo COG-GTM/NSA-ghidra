@@ -98,14 +98,14 @@
         "api": "curl_easy_setopt",
         "address": "00401265",
         "function": "fetch_capabilities",
-        "heuristic": false
+        "heuristic": true
       },
       "confidence": "high",
       "protocolHint": "http-auth",
       "notes": [
         "HTTP authentication header",
         "credential redacted",
-        "passed as argument 2 to curl_easy_setopt at 00401265"
+        "nearest call in same function (heuristic)"
       ]
     },
     {
@@ -194,7 +194,8 @@
       "external": false,
       "notes": [
         "statically linked or stub",
-        "CURLOPT_URL identifies the endpoint argument; CURLOPT_SSL_VERIFYPEER=0 is reported as a finding"
+        "CURLOPT_URL identifies the endpoint argument; CURLOPT_SSL_VERIFYPEER=0 is reported as a finding",
+        "option 10018 not in API table"
       ]
     },
     {

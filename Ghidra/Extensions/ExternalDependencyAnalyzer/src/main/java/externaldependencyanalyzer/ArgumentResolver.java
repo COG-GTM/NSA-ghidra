@@ -135,7 +135,8 @@ final class ArgumentResolver {
 				throw e;
 			}
 			catch (RuntimeException e) {
-				Msg.debug(this, "Constant propagation failed in " + function.getName());
+				Msg.debug(this, "Constant propagation failed in " +
+					DependencyScanner.functionName(function));
 				propagationFailed.add(entry);
 				return null;
 			}

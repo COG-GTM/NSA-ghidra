@@ -181,6 +181,12 @@ public class ExportExternalDependenciesHeadlessTest extends AbstractGhidraHeadle
 		assertEquals(List.of("fetch_capabilities"), url.referencingFunctions());
 		assertEquals("curl_easy_setopt", url.nearestNetworkCall().api());
 		assertEquals("fetch_capabilities", header.nearestNetworkCall().function());
+		// The header is passed with an option that is not in the API table, so it is linked only
+		// heuristically and never read as the endpoint argument.
+		assertTrue(header.nearestNetworkCall().heuristic());
+		assertTrue(header.notes().stream().noneMatch(n -> n.startsWith("passed as argument")));
+		assertTrue(r.apiCallSites().stream().anyMatch(c -> c.api().equals("curl_easy_setopt") &&
+			c.notes().contains("option 10018 not in API table")));
 
 		assertEquals(List.of("open_broker_socket"), port.referencingFunctions());
 		assertEquals("htons", port.nearestNetworkCall().api());
