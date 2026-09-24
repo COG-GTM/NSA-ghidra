@@ -417,6 +417,12 @@ public class ExternalDependencyExporterTest extends AbstractGhidraHeadlessIntegr
 		assertEquals(DependencyCategory.QUEUE,
 			DependencyRules.classifyString("mq.example.com:5672"));
 		assertEquals(DependencyCategory.QUEUE,
+			DependencyRules.classifyString("localhost:5672"));
+		assertEquals(DependencyCategory.QUEUE,
+			DependencyRules.classifyString("[::1]:5672"));
+		assertEquals(DependencyCategory.ENDPOINT,
+			DependencyRules.classifyString("localhost:8443"));
+		assertEquals(DependencyCategory.QUEUE,
 			DependencyRules.classifyString(":5672"));
 		assertEquals(DependencyCategory.ENDPOINT,
 			DependencyRules.classifyString(ExternalDependencyFixture.PORT_5432));
@@ -439,6 +445,8 @@ public class ExternalDependencyExporterTest extends AbstractGhidraHeadlessIntegr
 			DependencyRules.redact("jdbc:postgresql://h/db?sslpassword=abc&user=u"));
 		assertEquals("https://api.example.com/cb#access_token=***REDACTED***",
 			DependencyRules.redact("https://api.example.com/cb#access_token=abc"));
+		assertTrue(DependencyRules.redact("https://api.example.com/cb#foo.access_token=abc")
+			.endsWith("access_token=***REDACTED***"));
 		assertEquals("Authorization: Bearer ***REDACTED***",
 			DependencyRules.redact(ExternalDependencyFixture.AUTHORIZATION));
 		assertEquals("X-Api-Key: ***REDACTED***",
