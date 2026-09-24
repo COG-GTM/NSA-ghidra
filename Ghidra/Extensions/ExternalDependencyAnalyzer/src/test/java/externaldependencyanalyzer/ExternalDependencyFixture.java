@@ -21,6 +21,7 @@ import ghidra.program.model.address.AddressSet;
 import ghidra.program.model.data.StringDataType;
 import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
+import ghidra.program.model.symbol.ExternalLocation;
 import ghidra.program.model.symbol.SourceType;
 import ghidra.test.ToyProgramBuilder;
 
@@ -32,6 +33,8 @@ public class ExternalDependencyFixture {
 	public static final String TLS_HELPER_ADDRESS = "0x10c4";
 	public static final String TLS_THUNK_ADDRESS = "0x1104";
 	public static final String SSL_CONNECT_SECOND_ADDRESS = "0x10c8";
+	public static final String SSL_CONNECT_THUNK_CALL_ADDRESS = "0x105c";
+	public static final String HTTP_URL_INTERIOR_ADDRESS = "0x1094";
 
 	public static final String DB_HOST_ADDRESS = "0x2000";
 	public static final String MQ_HOST_ADDRESS = "0x2080";
@@ -118,17 +121,24 @@ public class ExternalDependencyFixture {
 		builder.createMemoryReadReference("0x1088", PORT_5672_ADDRESS);
 		builder.createMemoryReadReference("0x108c", AMQPS_ADDRESS);
 		builder.createMemoryReadReference("0x1090", HTTP_URL_ADDRESS);
+		builder.createMemoryReadReference(HTTP_URL_INTERIOR_ADDRESS, "0x2108");
 		builder.createMemoryReadReference("0x1104", AUTHORIZATION_ADDRESS);
 
-		builder.createExternalFunction(null, "libssl.so.3", "SSL_connect");
+		ExternalLocation sslConnectExtLoc =
+			builder.createExternalFunction(null, "libssl.so.3", "SSL_connect");
 		builder.createExternalFunction(null, "libssl.so.3", "SSL_CTX_new");
-		builder.createExternalFunction(null, "libpq.so.5", "PQconnectdb");
+		builder.createExternalFunction(null, "libpq.so.5", "db_connect_renamed", "PQconnectdb");
 		builder.createExternalFunction(null, "libc.so.6", "getaddrinfo");
+		builder.tx(() -> program.getFunctionManager().createThunkFunction(null,
+			program.getGlobalNamespace(), builder.addr("0x1110"),
+			new AddressSet(builder.addr("0x1110"), builder.addr("0x111f")),
+			sslConnectExtLoc.getFunction(), SourceType.IMPORTED));
 		builder.createExternalReference("0x10c4", "libssl.so.3", "SSL_connect", 0);
 		builder.createExternalReference("0x1108", "libssl.so.3", "SSL_CTX_new", 0);
-		builder.createExternalReference("0x1010", "libpq.so.5", "PQconnectdb", 0);
+		builder.createExternalReference("0x1010", "libpq.so.5", "db_connect_renamed", 0);
 		builder.createExternalReference("0x1058", "libc.so.6", "getaddrinfo", 0);
 		builder.createExternalReference("0x10c8", "libssl.so.3", "SSL_connect", 0);
+		builder.createMemoryCallReference(SSL_CONNECT_THUNK_CALL_ADDRESS, "0x1110");
 	}
 
 	public Program getProgram() {

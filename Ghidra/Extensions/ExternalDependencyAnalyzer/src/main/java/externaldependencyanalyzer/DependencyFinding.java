@@ -92,7 +92,29 @@ public final class DependencyFinding implements Comparable<DependencyFinding> {
 		if (result != 0) {
 			return result;
 		}
-		return indicatorAddress.compareTo(other.indicatorAddress);
+		result = indicatorAddress.compareTo(other.indicatorAddress);
+		if (result != 0) {
+			return result;
+		}
+		result = compareNullable(library, other.library);
+		if (result != 0) {
+			return result;
+		}
+		result = compareNullable(functionName, other.functionName);
+		if (result != 0) {
+			return result;
+		}
+		return Boolean.compare(viaThunk, other.viaThunk);
+	}
+
+	private static int compareNullable(String left, String right) {
+		if (left == null) {
+			return right == null ? 0 : -1;
+		}
+		if (right == null) {
+			return 1;
+		}
+		return left.compareTo(right);
 	}
 
 	@Override

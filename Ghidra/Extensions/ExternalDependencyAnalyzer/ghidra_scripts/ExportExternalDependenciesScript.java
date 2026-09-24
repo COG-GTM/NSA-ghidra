@@ -23,14 +23,13 @@ import externaldependencyanalyzer.DependencyFinding;
 import externaldependencyanalyzer.ExternalDependencyExporter;
 import externaldependencyanalyzer.ExternalDependencyScanner;
 import ghidra.app.script.GhidraScript;
-import ghidra.util.task.TaskMonitor;
 
 public class ExportExternalDependenciesScript extends GhidraScript {
 
 	@Override
 	protected void run() throws Exception {
 		List<DependencyFinding> findings = ExternalDependencyScanner.scan(currentProgram,
-			TaskMonitor.DUMMY);
+			monitor);
 		String json = ExternalDependencyExporter.toJson(currentProgram, findings);
 		String markdown = ExternalDependencyExporter.toMarkdown(currentProgram, findings);
 		if (getScriptArgs().length == 0) {

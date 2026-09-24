@@ -17,9 +17,13 @@ package externaldependencyanalyzer;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import ghidra.program.model.address.Address;
+import ghidra.program.model.address.AddressIterator;
+import ghidra.program.model.address.AddressSet;
 import ghidra.program.model.data.StringDataInstance;
 import ghidra.program.model.listing.Data;
 import ghidra.program.model.listing.Function;
@@ -59,18 +63,24 @@ public class ExternalDependencyScanner {
 				continue;
 			}
 			String redacted = DependencyRules.redact(value);
-			ReferenceIterator references =
-				program.getReferenceManager().getReferencesTo(data.getAddress());
+			AddressSet dataRange = new AddressSet(data.getMinAddress(), data.getMaxAddress());
+			AddressIterator destinations =
+				program.getReferenceManager().getReferenceDestinationIterator(dataRange, true);
 			boolean foundReference = false;
-			while (references.hasNext()) {
+			while (destinations.hasNext()) {
 				monitor.checkCancelled();
-				foundReference = true;
-				addFinding(findings, category, "string", redacted, null, data.getAddress(),
-					references.next().getFromAddress(), program);
+				ReferenceIterator references =
+					program.getReferenceManager().getReferencesTo(destinations.next());
+				while (references.hasNext()) {
+					monitor.checkCancelled();
+					foundReference = true;
+					addFinding(findings, category, "string", redacted, null, data.getAddress(),
+						references.next().getFromAddress(), program, false);
+				}
 			}
 			if (!foundReference) {
 				addFinding(findings, category, "string", redacted, null, data.getAddress(),
-					data.getAddress(), program);
+					data.getAddress(), program, false);
 			}
 		}
 	}
@@ -87,17 +97,48 @@ public class ExternalDependencyScanner {
 			while (locations.hasNext()) {
 				monitor.checkCancelled();
 				ExternalLocation location = locations.next();
-				DependencyCategory category = DependencyRules.classifyImport(location.getLabel());
+				String importedName = location.getOriginalImportedName();
+				if (importedName == null) {
+					importedName = location.getLabel();
+				}
+				DependencyCategory category = DependencyRules.classifyImport(importedName);
 				if (category == null) {
 					continue;
 				}
 				Address indicatorAddress = location.getExternalSpaceAddress();
 				ReferenceIterator references =
 					program.getReferenceManager().getReferencesTo(indicatorAddress);
+				Function externalFunction = location.getFunction();
+				Set<Address> thunkAddresses = new HashSet<>();
+				if (externalFunction != null) {
+					Address[] addresses = externalFunction.getFunctionThunkAddresses(true);
+					if (addresses != null) {
+						Collections.addAll(thunkAddresses, addresses);
+					}
+				}
 				while (references.hasNext()) {
 					monitor.checkCancelled();
-					addFinding(findings, category, "import", location.getLabel(), library,
-						indicatorAddress, references.next().getFromAddress(), program);
+					Reference reference = references.next();
+					Address fromAddress = reference.getFromAddress();
+					if (isReferenceInsideThunkOf(fromAddress, externalFunction, program)) {
+						continue;
+					}
+					addFinding(findings, category, "import", importedName, library, indicatorAddress,
+						fromAddress, program, false);
+				}
+				for (Address thunkAddress : thunkAddresses) {
+					monitor.checkCancelled();
+					ReferenceIterator thunkReferences =
+						program.getReferenceManager().getReferencesTo(thunkAddress);
+					while (thunkReferences.hasNext()) {
+						monitor.checkCancelled();
+						Address fromAddress = thunkReferences.next().getFromAddress();
+						if (isReferenceInsideThunkOf(fromAddress, externalFunction, program)) {
+							continue;
+						}
+						addFinding(findings, category, "import", importedName, library,
+							indicatorAddress, fromAddress, program, true);
+					}
 				}
 			}
 		}
@@ -105,9 +146,8 @@ public class ExternalDependencyScanner {
 
 	private static void addFinding(List<DependencyFinding> findings, DependencyCategory category,
 			String kind, String value, String library, Address indicatorAddress, Address fromAddress,
-			Program program) {
+			Program program, boolean viaThunk) {
 		Function function = program.getFunctionManager().getFunctionContaining(fromAddress);
-		boolean viaThunk = false;
 		if (function != null && function.isThunk()) {
 			Function thunked = function.getThunkedFunction(true);
 			if (thunked != null) {
@@ -117,5 +157,17 @@ public class ExternalDependencyScanner {
 		}
 		findings.add(new DependencyFinding(category, kind, value, library, indicatorAddress,
 			fromAddress, function == null ? null : function.getName(), viaThunk));
+	}
+
+	private static boolean isReferenceInsideThunkOf(Address fromAddress, Function function,
+			Program program) {
+		if (function == null) {
+			return false;
+		}
+		Function containing = program.getFunctionManager().getFunctionContaining(fromAddress);
+		if (containing == null || !containing.isThunk()) {
+			return false;
+		}
+		return containing.getThunkedFunction(true) == function;
 	}
 }

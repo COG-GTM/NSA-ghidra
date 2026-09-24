@@ -148,6 +148,17 @@ public class ExternalDependencyExporterTest extends AbstractGhidraHeadlessIntegr
 		      "via_thunk": false
 		    },
 		    {
+		      "from_address": "0000105c",
+		      "category": "auth_tls",
+		      "severity": "HIGH",
+		      "kind": "import",
+		      "value": "SSL_connect",
+		      "library": "libssl.so.3",
+		      "indicator_address": "EXTERNAL:00000001",
+		      "function": "call_api",
+		      "via_thunk": true
+		    },
+		    {
 		      "from_address": "00001084",
 		      "category": "queue",
 		      "severity": "MEDIUM",
@@ -182,6 +193,17 @@ public class ExternalDependencyExporterTest extends AbstractGhidraHeadlessIntegr
 		    },
 		    {
 		      "from_address": "00001090",
+		      "category": "http",
+		      "severity": "MEDIUM",
+		      "kind": "string",
+		      "value": "https://api.example.com/v1/orders",
+		      "library": null,
+		      "indicator_address": "00002100",
+		      "function": "send_queue",
+		      "via_thunk": false
+		    },
+		    {
+		      "from_address": "00001094",
 		      "category": "http",
 		      "severity": "MEDIUM",
 		      "kind": "string",
@@ -267,10 +289,12 @@ public class ExternalDependencyExporterTest extends AbstractGhidraHeadlessIntegr
 		| 00001050 | endpoint | LOW | string | :8443 | - | 00002200 | call_api | false |
 		| 00001054 | endpoint | LOW | string | 192.0.2.10:8443 | - | 00002480 | call_api | false |
 		| 00001058 | endpoint | LOW | import | getaddrinfo | libc.so.6 | EXTERNAL:00000004 | call_api | false |
+		| 0000105c | auth_tls | HIGH | import | SSL_connect | libssl.so.3 | EXTERNAL:00000001 | call_api | true |
 		| 00001084 | queue | MEDIUM | string | mq.example.com | - | 00002080 | send_queue | false |
 		| 00001088 | queue | MEDIUM | string | :5672 | - | 00002280 | send_queue | false |
 		| 0000108c | queue | MEDIUM | string | amqps://mq.example.com:5672/vhost | - | 00002500 | send_queue | false |
 		| 00001090 | http | MEDIUM | string | https://api.example.com/v1/orders | - | 00002100 | send_queue | false |
+		| 00001094 | http | MEDIUM | string | https://api.example.com/v1/orders | - | 00002100 | send_queue | false |
 		| 000010c4 | auth_tls | HIGH | import | SSL_connect | libssl.so.3 | EXTERNAL:00000001 | tls_helper | false |
 		| 000010c8 | auth_tls | HIGH | import | SSL_connect | libssl.so.3 | EXTERNAL:00000001 | tls_helper | false |
 		| 00001104 | auth_tls | HIGH | string | Authorization: Bearer ***REDACTED*** | - | 00002380 | tls_helper | true |
@@ -326,13 +350,20 @@ public class ExternalDependencyExporterTest extends AbstractGhidraHeadlessIntegr
 			ExternalDependencyFixture.CONNECT_DB_ADDRESS);
 		assertNotNull(jdbc);
 		assertEquals("connect_db", jdbc.getFunctionName());
-		assertEquals(2, findFrom(findings, "https://api.example.com/v1/orders").size());
+		assertEquals(3, findFrom(findings, "https://api.example.com/v1/orders").size());
+		DependencyFinding thunkImport = find(findings, "SSL_connect",
+			ExternalDependencyFixture.SSL_CONNECT_THUNK_CALL_ADDRESS);
+		assertNotNull(thunkImport);
+		assertEquals("call_api", thunkImport.getFunctionName());
+		assertTrue(thunkImport.isViaThunk());
 		DependencyFinding authThunk = find(findings, "Authorization: Bearer ***REDACTED***",
 			ExternalDependencyFixture.TLS_THUNK_ADDRESS);
 		assertNotNull(authThunk);
 		assertEquals("tls_helper", authThunk.getFunctionName());
 		assertTrue(authThunk.isViaThunk());
-		assertEquals(2, findImports(findings, "SSL_connect").size());
+		assertEquals(3, findImports(findings, "SSL_connect").size());
+		DependencyFinding renamedJdbc = find(findings, "PQconnectdb", "0x1010");
+		assertNotNull(renamedJdbc);
 		DependencyFinding ctx = find(findings, "SSL_CTX_new", "0x1108");
 		assertNotNull(ctx);
 		assertEquals("tls_helper", ctx.getFunctionName());
@@ -368,6 +399,10 @@ public class ExternalDependencyExporterTest extends AbstractGhidraHeadlessIntegr
 			DependencyRules.classifyString(ExternalDependencyFixture.MQ_HOST));
 		assertEquals(DependencyCategory.HTTP,
 			DependencyRules.classifyString(ExternalDependencyFixture.HTTP_URL));
+		assertEquals(DependencyCategory.HTTP,
+			DependencyRules.classifyString("http://example.com:5672"));
+		assertEquals(DependencyCategory.QUEUE,
+			DependencyRules.classifyString("amqp://x:5672"));
 		assertEquals(DependencyCategory.ENDPOINT,
 			DependencyRules.classifyString(ExternalDependencyFixture.PORT_5432));
 		assertEquals(DependencyCategory.JDBC,
@@ -383,6 +418,8 @@ public class ExternalDependencyExporterTest extends AbstractGhidraHeadlessIntegr
 		assertEquals(null, DependencyRules.classifyString("hello world"));
 		assertEquals("password=***REDACTED***",
 			DependencyRules.redact("password=REDACTME"));
+		assertEquals("jdbc:x://h/db?user=u&password=***REDACTED***&ssl=true",
+			DependencyRules.redact("jdbc:x://h/db?user=u&password=two words&ssl=true"));
 		assertEquals("Authorization: Bearer ***REDACTED***",
 			DependencyRules.redact(ExternalDependencyFixture.AUTHORIZATION));
 		assertEquals("X-Api-Key: ***REDACTED***",
