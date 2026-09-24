@@ -249,7 +249,8 @@ final class ArgumentResolver {
 	private Resolved constantLoadedFrom(Address addr, int size) {
 		Memory memory = program.getMemory();
 		MemoryBlock block = memory.getBlock(addr);
-		if (block == null || !block.isInitialized() || block.isWrite() || size < 1 || size > 8) {
+		if (block == null || !block.isInitialized() || block.isWrite() || size < 1 || size > 8 ||
+			block.getEnd().subtract(addr) < size - 1) {
 			return null;
 		}
 		byte[] buf = new byte[size];

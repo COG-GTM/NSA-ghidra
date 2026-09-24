@@ -60,7 +60,7 @@ public final class DependencyScanner {
 	private final List<Finding> findings = new ArrayList<>();
 
 	private record CallSiteInfo(Address address, Function function, ApiEntry api,
-			boolean external, List<String> notes) {
+			boolean external, boolean invocation, List<String> notes) {
 	}
 
 	private static final class EndpointBuilder {
@@ -189,12 +189,14 @@ public final class DependencyScanner {
 			}
 			List<String> notes = new ArrayList<>();
 			RefType type = ref.getReferenceType();
+			boolean invocation = true;
 			if (!type.isCall()) {
 				if (type.isJump()) {
 					notes.add("tail call");
 				}
 				else if (type.isData() || type.isRead()) {
-					notes.add("address taken; call is indirect");
+					invocation = false;
+					notes.add("address taken; call is indirect; arguments not recovered");
 				}
 				else {
 					continue;
@@ -211,7 +213,8 @@ public final class DependencyScanner {
 			}
 			CallSiteInfo existing = callSites.get(from);
 			if (existing == null) {
-				callSites.put(from, new CallSiteInfo(from, func, api, external, notes));
+				callSites.put(from,
+					new CallSiteInfo(from, func, api, external, invocation, notes));
 				if (func != null) {
 					callSitesByFunction.computeIfAbsent(func.getEntryPoint(), k -> new TreeSet<>())
 							.add(from);
@@ -321,7 +324,7 @@ public final class DependencyScanner {
 		for (CallSiteInfo cs : new ArrayList<>(callSites.values())) {
 			monitor.checkCancelled();
 			Instruction instr = listing.getInstructionAt(cs.address());
-			if (instr == null || cs.function() == null) {
+			if (instr == null || cs.function() == null || !cs.invocation()) {
 				continue;
 			}
 			ApiEntry api = cs.api();
@@ -902,7 +905,12 @@ public final class DependencyScanner {
 				return null;
 			}
 		}
-		byte[] buf = new byte[MAX_RAW_STRING];
+		MemoryBlock block = memory.getBlock(addr);
+		if (block == null || !block.isInitialized()) {
+			return null;
+		}
+		long remaining = block.getEnd().subtract(addr) + 1;
+		byte[] buf = new byte[(int) Math.min(MAX_RAW_STRING, remaining)];
 		int n;
 		try {
 			n = memory.getBytes(addr, buf);

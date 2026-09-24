@@ -265,8 +265,10 @@ public class ExternalDependencyAnalyzerTest extends AbstractGhidraHeadlessIntegr
 	public void testMemoryLoadsAreNotTreatedAsPointerArguments() throws Exception {
 		// Writable .data holds raw hostname bytes; read-only .rodata holds a pointer to a
 		// second raw hostname whose terminator is the last byte of the block, and a third raw
-		// hostname that runs to the end of the block with no terminator at all. None is a
-		// defined string, so each can only surface through argument resolution.
+		// hostname that runs to the end of the block with no terminator at all; the adjacent
+		// block begins with a NUL byte. None is left as a defined string (auto-analysis
+		// defines one at the lea target that spans the block boundary, so it is cleared), so
+		// each can only surface through argument resolution.
 		MemoryBlock data = builder.createMemory(".data", "0x403000", 0x100);
 		builder.setWrite(data, true);
 		builder.setBytes("0x403000", ascii("db-shadow.example.test") + " 00");
@@ -274,6 +276,7 @@ public class ExternalDependencyAnalyzerTest extends AbstractGhidraHeadlessIntegr
 		builder.setBytes("0x4021e8", ascii("db-standby.example.test") + " 00");
 		builder.createMemory(".rodata2", "0x404000", 0x10);
 		builder.setBytes("0x404000", ascii("db.example.test!"));
+		builder.createMemory(".rodata3", "0x404010", 0x10);
 
 		// loader at 0x401040:
 		//   mov rdi,[rip+X] -> 0x403000        48 8b 3d disp32   (7 bytes, ends 0x401047)
@@ -289,6 +292,9 @@ public class ExternalDependencyAnalyzerTest extends AbstractGhidraHeadlessIntegr
 		builder.setBytes("0x401040", code, true);
 		builder.createFunction("0x401040");
 		builder.createLabel("0x401040", "loader");
+		builder.clearCodeUnits("0x404000", "0x40401f", false);
+		assertNull(program.getListing().getDefinedDataContaining(
+			program.getAddressFactory().getDefaultAddressSpace().getAddress(0x404000)));
 
 		ScanResult r = runAnalyzer(ScanOptions.defaults());
 		List<String> values = r.endpoints().stream().map(Endpoint::value).toList();
@@ -322,7 +328,8 @@ public class ExternalDependencyAnalyzerTest extends AbstractGhidraHeadlessIntegr
 		assertEquals("PQconnectdb", standby.nearestNetworkCall().api());
 		assertEquals("00401053", standby.nearestNetworkCall().address());
 
-		// Bytes that run to the end of the block without a terminator are not a string.
+		// Bytes that run to the end of the block without a terminator are not a string, even
+		// when the next initialized block supplies a NUL.
 		for (Endpoint e : r.endpoints()) {
 			assertFalse(e.value(), e.value().startsWith("db.example.test"));
 			assertNotEquals("00404000", e.address());
@@ -523,6 +530,57 @@ public class ExternalDependencyAnalyzerTest extends AbstractGhidraHeadlessIntegr
 		assertTrue(r.findings().stream().noneMatch(
 			f -> f.rule().equals(Rule.RUNTIME_SUPPLIED_ENDPOINT.jsonName()) &&
 				f.function().equals("setter")));
+		// The genuine CURLOPT_URL call in main is unaffected.
+		Endpoint url = r.endpoints().stream().filter(e -> e.value().equals(URL)).findFirst()
+				.orElseThrow();
+		assertEquals(Confidence.HIGH, url.confidence());
+		assertEquals("00401018", url.nearestNetworkCall().address());
+		assertFalse(url.nearestNetworkCall().heuristic());
+	}
+
+	@Test
+	public void testAddressTakenApiReferenceIsNotTreatedAsInvocation() throws Exception {
+		builder.setBytes("0x402100", ascii("http://indirect.example.test/x") + " 00");
+
+		// loader at 0x401040 sets up what look like curl_easy_setopt arguments, then only
+		// takes the address of curl_easy_setopt and stores the pointer for a later caller:
+		//   mov esi,0x2712 (CURLOPT_URL)       be 12 27 00 00    (5 bytes, ends 0x401045)
+		//   lea rdx,[rip+X] -> 0x402100        48 8d 15 disp32   (7 bytes, ends 0x40104c)
+		//   lea rax,[rip+Y] -> 0x401110        48 8d 05 disp32   (7 bytes, ends 0x401053)
+		//   mov [rbx],rax                      48 89 03          (3 bytes, ends 0x401056)
+		//   ret                                c3
+		String code = "be 12 27 00 00 " + "48 8d 15 " + le32(0x402100 - 0x40104c) + "48 8d 05 " +
+			le32(0x401110 - 0x401053) + "48 89 03 " + "c3";
+		builder.setBytes("0x401040", code, true);
+		builder.createFunction("0x401040");
+		builder.createLabel("0x401040", "loader");
+		builder.createMemoryReference("0x40104c", "0x401110", RefType.DATA, SourceType.ANALYSIS);
+
+		ScanResult r = runAnalyzer(ScanOptions.defaults());
+		ApiCallSite taken = r.apiCallSites().stream().filter(
+			c -> c.address().equals("0040104c")).findFirst().orElseThrow();
+		assertEquals("curl_easy_setopt", taken.api());
+		assertEquals("loader", taken.function());
+		assertTrue(taken.notes().toString(),
+			taken.notes().contains("address taken; call is indirect; arguments not recovered"));
+		assertTrue(taken.notes().toString(), taken.notes().stream().noneMatch(
+			n -> n.startsWith("option ") || n.contains("argument not a constant")));
+		// The pointer load is never treated as passing the URL: if the string surfaces at all
+		// it is through the string scan, linked only heuristically.
+		for (Endpoint e : r.endpoints()) {
+			assertTrue(e.notes().toString(), e.notes().stream().noneMatch(
+				n -> n.contains("to curl_easy_setopt at 0040104c")));
+			if (e.value().contains("indirect.example.test")) {
+				assertTrue(e.notes().toString(),
+					e.notes().stream().noneMatch(n -> n.startsWith("passed as argument")));
+				assertTrue(e.toString(),
+					e.nearestNetworkCall() == null || e.nearestNetworkCall().heuristic());
+			}
+		}
+		assertTrue(r.findings().toString(), r.findings().stream().noneMatch(
+			f -> f.function().equals("loader") &&
+				(f.rule().equals(Rule.RUNTIME_SUPPLIED_ENDPOINT.jsonName()) ||
+					f.rule().equals(Rule.TLS_VERIFICATION_DISABLED.jsonName()))));
 		// The genuine CURLOPT_URL call in main is unaffected.
 		Endpoint url = r.endpoints().stream().filter(e -> e.value().equals(URL)).findFirst()
 				.orElseThrow();

@@ -38,7 +38,12 @@ Kerberos, messaging, RPC, file share and SSH APIs). Where the table names an
 argument index, the analyzer resolves constant string or integer arguments at the
 call site: the URL passed to `curl_easy_setopt(..., CURLOPT_URL, ...)`, the host
 passed to `getaddrinfo`, the connection string passed to `PQconnectdb`, the port
-passed to `htons`, or the mode passed to `SSL_CTX_set_verify`.
+passed to `htons`, or the mode passed to `SSL_CTX_set_verify`. Arguments are
+resolved only at direct calls and tail calls. An instruction that merely takes
+the address of a table API (a function-pointer load) is still listed as a call
+site so the referencing function is visible, but it carries the note
+`address taken; call is indirect; arguments not recovered` and produces no
+argument-derived endpoints or findings.
 
 Linkage: for each endpoint, the defining address, the functions that reference it
 (directly or through one level of pointer table), and the nearest network or
