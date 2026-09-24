@@ -420,6 +420,7 @@ public class ExternalDependencyExporterTest extends AbstractGhidraHeadlessIntegr
 			DependencyRules.classifyString("localhost:5672"));
 		assertEquals(DependencyCategory.QUEUE,
 			DependencyRules.classifyString("[::1]:5672"));
+		assertEquals(null, DependencyRules.classifyString("[.]:5672"));
 		assertEquals(DependencyCategory.ENDPOINT,
 			DependencyRules.classifyString("localhost:8443"));
 		assertEquals(DependencyCategory.QUEUE,
@@ -447,6 +448,10 @@ public class ExternalDependencyExporterTest extends AbstractGhidraHeadlessIntegr
 			DependencyRules.redact("https://api.example.com/cb#access_token=abc"));
 		assertTrue(DependencyRules.redact("https://api.example.com/cb#foo.access_token=abc")
 			.endsWith("access_token=***REDACTED***"));
+		assertEquals("https://user:***REDACTED***@api.example.com:8443/path",
+			DependencyRules.redact("https://user:password=abc@api.example.com:8443/path"));
+		assertEquals("?password_token=***REDACTED***&x=1",
+			DependencyRules.redact("?password_token=PRIVATE&x=1"));
 		assertEquals("Authorization: Bearer ***REDACTED***",
 			DependencyRules.redact(ExternalDependencyFixture.AUTHORIZATION));
 		assertEquals("X-Api-Key: ***REDACTED***",

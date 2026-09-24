@@ -36,7 +36,7 @@ final class DependencyRules {
 		Pattern.compile("^\\d{1,3}(?:\\.\\d{1,3}){3}(?::\\d{1,5})?$");
 	private static final Pattern BARE_PORT = Pattern.compile("^:\\d{2,5}$");
 	private static final Pattern HOST_PORT = Pattern.compile(
-		"^(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z][A-Za-z0-9-]*(?:\\.[A-Za-z0-9-]+)*):\\d{1,5}$");
+		"^(?:\\[[0-9A-Fa-f:.]*:[0-9A-Fa-f:.]*\\]|[A-Za-z][A-Za-z0-9-]*(?:\\.[A-Za-z0-9-]+)*):\\d{1,5}$");
 
 	private static final Set<String> AUTH_TLS_IMPORTS = Set.of(
 		"SSL_connect", "SSL_CTX_new", "SSL_read", "SSL_write", "SSL_set_fd",
@@ -129,13 +129,14 @@ final class DependencyRules {
 		if (s == null) {
 			return null;
 		}
-		return s.replaceAll(
-			"(?i)((?:password|passwd|pwd|secret|api_?key|access_token|token)=)[^&;]+",
-			"$1" + REDACTION_MARKER)
+		return s.replaceAll("(?i)(://[^/:@\\s]+:)[^@/\\s]+(@)",
+			"$1" + REDACTION_MARKER + "$2")
+			.replaceAll(
+				"(?i)((?:password|passwd|pwd|secret|api_?key|access_token|token)=)[^&;]+",
+				"$1" + REDACTION_MARKER)
 			.replaceAll("(?i)((?:authorization\\s*:\\s*)?(?:bearer|basic)\\s+)\\S+",
 				"$1" + REDACTION_MARKER)
 			.replaceAll("(?i)((?:x-api-key|x-auth-token|api-key)\\s*:\\s*)\\S+",
-				"$1" + REDACTION_MARKER)
-			.replaceAll("(?i)(://[^/:@\\s]+:)[^@/\\s]+(@)", "$1" + REDACTION_MARKER + "$2");
+				"$1" + REDACTION_MARKER);
 	}
 }
