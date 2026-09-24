@@ -18,16 +18,20 @@ package ghidra.app.util.viewer.field;
 import java.io.*;
 import java.util.*;
 
+import docking.widgets.OptionDialog;
 import docking.widgets.fieldpanel.field.AttributedString;
 import ghidra.app.nav.Navigatable;
 import ghidra.framework.plugintool.ServiceProvider;
 import ghidra.program.model.listing.Program;
+import ghidra.util.HTMLUtilities;
 import ghidra.util.Msg;
 
 public class ExecutableTaskStringHandler implements AnnotatedStringHandler {
 	private static final String INVALID_SYMBOL_TEXT =
 		"@execute annotation must have an executable name";
 	private static final String[] SUPPORTED_ANNOTATIONS = { "execute" };
+	private static final int CONFIRM_MAX_LINE_LENGTH = 80;
+	private static final int CONFIRM_MAX_ARG_LENGTH = 1600;
 
 	@Override
 	public AttributedString createAnnotatedString(AttributedString prototypeString, String[] text,
@@ -104,9 +108,65 @@ public class ExecutableTaskStringHandler implements AnnotatedStringHandler {
 			}
 		}
 
+		if (!confirmExecution(command)) {
+			return true; // the click was handled; the user cancelled the execution
+		}
+
 		new ProcessThread(command).start();
 
 		return true;
+	}
+
+	private boolean confirmExecution(List<String> command) {
+		StringBuilder buffy = new StringBuilder(HTMLUtilities.HTML);
+		buffy.append("This comment annotation is requesting to run the following command on ");
+		buffy.append("your system.<br>Each argument is shown quoted on its own line.<br><br><tt>");
+		for (String arg : command) {
+			buffy.append("&quot;").append(toDisplayableHTML(arg)).append("&quot;<br>");
+		}
+		buffy.append("</tt><br>");
+		buffy.append("Comments may come from imported or shared files and are not trusted.<br>");
+		buffy.append("Only run this command if you know exactly what it does.");
+
+		int choice = OptionDialog.showOptionDialogWithCancelAsDefaultButton(null,
+			"Run Executable From Comment Annotation?", buffy.toString(), "Run",
+			OptionDialog.WARNING_MESSAGE);
+		return choice == OptionDialog.OPTION_ONE;
+	}
+
+	/**
+	 * Renders an untrusted command argument so that it cannot alter the layout or wording of the
+	 * confirmation dialog: control and line-separator characters are shown as escapes, HTML is
+	 * escaped, and long values are hard-wrapped so nothing is clipped off-screen.
+	 */
+	private String toDisplayableHTML(String arg) {
+		StringBuilder visible = new StringBuilder();
+		arg.codePoints().forEach(cp -> {
+			int type = Character.getType(cp);
+			if (Character.isISOControl(cp) || type == Character.LINE_SEPARATOR ||
+				type == Character.PARAGRAPH_SEPARATOR || type == Character.FORMAT) {
+				visible.append(String.format("\\u%04X", cp));
+			}
+			else {
+				visible.appendCodePoint(cp);
+			}
+		});
+
+		StringBuilder buffy = new StringBuilder();
+		int length = Math.min(visible.length(), CONFIRM_MAX_ARG_LENGTH);
+		for (int start = 0; start < length; start += CONFIRM_MAX_LINE_LENGTH) {
+			if (start > 0) {
+				buffy.append("<br>");
+			}
+			int end = Math.min(length, start + CONFIRM_MAX_LINE_LENGTH);
+			buffy.append(HTMLUtilities.escapeHTML(visible.substring(start, end), true));
+		}
+		if (visible.length() > CONFIRM_MAX_ARG_LENGTH) {
+			buffy.append("<br><b>... [")
+					.append(visible.length() - CONFIRM_MAX_ARG_LENGTH)
+					.append(" more characters not shown]</b>");
+		}
+		return buffy.toString();
 	}
 
 //==================================================================================================
