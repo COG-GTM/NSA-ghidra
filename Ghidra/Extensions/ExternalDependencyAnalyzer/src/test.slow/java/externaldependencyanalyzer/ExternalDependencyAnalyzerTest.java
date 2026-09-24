@@ -33,6 +33,7 @@ import ghidra.program.database.ProgramBuilder;
 import ghidra.program.database.ProgramDB;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.address.AddressSet;
+import ghidra.program.model.data.PointerDataType;
 import ghidra.program.model.data.TerminatedStringDataType;
 import ghidra.program.model.listing.*;
 import ghidra.program.model.mem.MemoryBlock;
@@ -586,6 +587,44 @@ public class ExternalDependencyAnalyzerTest extends AbstractGhidraHeadlessIntegr
 				.orElseThrow();
 		assertEquals(Confidence.HIGH, url.confidence());
 		assertEquals("00401018", url.nearestNetworkCall().address());
+		assertFalse(url.nearestNetworkCall().heuristic());
+	}
+
+	@Test
+	public void testCallThroughImportSlotIsTreatedAsInvocation() throws Exception {
+		builder.setBytes("0x402100", ascii("http://iat.example.test/wfs") + " 00");
+		// Import-table style slot holding the address of curl_easy_setopt.
+		builder.createMemory(".idata", "0x403000", 0x10);
+		builder.setBytes("0x403000", "10 11 40 00 00 00 00 00");
+		builder.applyDataType("0x403000", new PointerDataType());
+
+		// caller at 0x401040 invokes curl_easy_setopt through the slot:
+		//   mov esi,0x2712 (CURLOPT_URL)       be 12 27 00 00    (5 bytes, ends 0x401045)
+		//   lea rdx,[rip+X] -> 0x402100        48 8d 15 disp32   (7 bytes, ends 0x40104c)
+		//   call qword ptr [rip+Y] -> 0x403000 ff 15 disp32      (6 bytes, ends 0x401052)
+		//   ret                                c3
+		String code = "be 12 27 00 00 " + "48 8d 15 " + le32(0x402100 - 0x40104c) + "ff 15 " +
+			le32(0x403000 - 0x401052) + "c3";
+		builder.setBytes("0x401040", code, true);
+		builder.createFunction("0x401040");
+		builder.createLabel("0x401040", "caller");
+
+		ScanResult r = runAnalyzer(ScanOptions.defaults());
+		ApiCallSite site = r.apiCallSites().stream().filter(
+			c -> c.address().equals("0040104c")).findFirst().orElseThrow();
+		assertEquals("curl_easy_setopt", site.api());
+		assertEquals("caller", site.function());
+		assertTrue(site.notes().toString(), site.notes().contains("indirect call"));
+		assertTrue(site.notes().toString(), site.notes().contains("option CURLOPT_URL"));
+		assertTrue(site.notes().toString(),
+			site.notes().stream().noneMatch(n -> n.startsWith("address taken")));
+		Endpoint url = r.endpoints().stream().filter(
+			e -> e.value().equals("http://iat.example.test/wfs")).findFirst().orElseThrow();
+		assertEquals(Confidence.HIGH, url.confidence());
+		assertTrue(url.notes().toString(),
+			url.notes().contains("passed as argument 2 to curl_easy_setopt at 0040104c"));
+		assertEquals("0040104c", url.nearestNetworkCall().address());
+		assertEquals("caller", url.nearestNetworkCall().function());
 		assertFalse(url.nearestNetworkCall().heuristic());
 	}
 

@@ -189,14 +189,23 @@ public final class DependencyScanner {
 			}
 			List<String> notes = new ArrayList<>();
 			RefType type = ref.getReferenceType();
+			FlowType flow = instr.getFlowType();
 			boolean invocation = true;
 			if (!type.isCall()) {
 				if (type.isJump()) {
 					notes.add("tail call");
 				}
 				else if (type.isData() || type.isRead()) {
-					invocation = false;
-					notes.add("address taken; call is indirect; arguments not recovered");
+					if (flow.isCall()) {
+						notes.add("indirect call");
+					}
+					else if (flow.isJump()) {
+						notes.add("tail call");
+					}
+					else {
+						invocation = false;
+						notes.add("address taken; call is indirect; arguments not recovered");
+					}
 				}
 				else {
 					continue;
