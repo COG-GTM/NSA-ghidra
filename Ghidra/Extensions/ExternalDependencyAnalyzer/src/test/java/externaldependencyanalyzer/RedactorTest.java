@@ -43,6 +43,25 @@ public class RedactorTest extends AbstractGenericTest {
 	}
 
 	@Test
+	public void testQuotedAndBracedKeyValuePasswordsAreMasked() {
+		String[] inputs = {
+			"host=db.example.test password='p;a&s,s w\"d' dbname=ops",
+			"host=db.example.test password=\"p;a&s,s w'd\" dbname=ops",
+			"Server=sql01;Pwd={p;a&s,s w'd};Database=ops",
+			"user=app password = 'p;a&s,s w\"d'",
+		};
+		for (String s : inputs) {
+			Redactor.Result r = Redactor.redact(s);
+			assertTrue(s, r.redacted());
+			assertFalse(s, r.text().contains("p;a&s"));
+			assertFalse(s, r.text().contains("s w"));
+			assertTrue(s, r.text().contains(Redactor.MASK));
+		}
+		assertEquals("host=db.example.test password=" + Redactor.MASK + " dbname=ops",
+			Redactor.redact("host=db.example.test password='p;a&s,s w\"d' dbname=ops").text());
+	}
+
+	@Test
 	public void testAuthorizationHeadersAreMasked() {
 		Redactor.Result r = Redactor.redact("Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.payload.sig");
 		assertTrue(r.redacted());

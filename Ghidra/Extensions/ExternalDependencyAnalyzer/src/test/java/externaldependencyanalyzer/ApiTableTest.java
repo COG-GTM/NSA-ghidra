@@ -131,6 +131,9 @@ public class ApiTableTest extends AbstractGenericTest {
 			"{\"apis\":[{\"name\":\"ok\",\"hostArgument\":-2}]}",
 			"{\"apis\":[{\"name\":\"ok\",\"hostArgument\":\"one\"}]}",
 			"{\"apis\":[{\"name\":\"ok\",\"optionValues\":{\"x\":\"CURLOPT_URL\"}}]}",
+			"{\"apis\":[{\"name\":\"ok\",\"optionValues\":{\"1\":\"CURLOPT URL; rm\"}}]}",
+			"{\"apis\":[{\"name\":\"ok\",\"protocolHint\":\"http <script>\"}]}",
+			"{\"apis\":[{\"name\":\"ok\",\"notes\":[\"x\"]}]}",
 		};
 		for (String json : rejected) {
 			try {
@@ -141,6 +144,18 @@ public class ApiTableTest extends AbstractGenericTest {
 				// rejected as intended
 			}
 		}
+	}
+
+	@Test
+	public void testCustomTableNotesAreSanitized() throws IOException {
+		ApiTable t = parse("{\"apis\":[{\"name\":\"vendor_login\",\"category\":\"database\"," +
+			"\"notes\":\"uses password=Tr0ub4dor\\nline2\\u0007 " + "x".repeat(600) + "\"}]}");
+		String notes = t.lookup("vendor_login").notes();
+		assertFalse(notes.contains("Tr0ub4dor"));
+		assertTrue(notes.contains("password=" + Redactor.MASK));
+		assertFalse(notes.contains("\n"));
+		assertFalse(notes.contains("\u0007"));
+		assertTrue(notes.length() <= 256);
 	}
 
 	@Test

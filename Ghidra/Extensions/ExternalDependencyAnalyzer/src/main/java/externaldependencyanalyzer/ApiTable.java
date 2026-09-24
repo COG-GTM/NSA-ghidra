@@ -34,6 +34,7 @@ public final class ApiTable {
 	public static final String DEFAULT_FILE_NAME = "external_dependency_apis.json";
 
 	private static final int MAX_FILE_BYTES = 4 * 1024 * 1024;
+	private static final int MAX_NOTES_LENGTH = 256;
 
 	/** One recognised API. Argument indices are zero-based; -1 means "not applicable". */
 	public record ApiEntry(String name, String category, String protocolHint, String notes,
@@ -201,26 +202,45 @@ public final class ApiTable {
 			for (Map.Entry<String, JsonElement> kv : o.getAsJsonObject("optionValues")
 					.entrySet()) {
 				try {
-					optionValues.put(Long.parseLong(kv.getKey().trim()),
-						kv.getValue().getAsString());
+					String optionName = kv.getValue().getAsString();
+					if (!optionName.matches("[A-Za-z0-9_]{1,64}")) {
+						throw new IOException("invalid option name for " + name);
+					}
+					optionValues.put(Long.parseLong(kv.getKey().trim()), optionName);
 				}
 				catch (NumberFormatException | IllegalStateException e) {
 					throw new IOException("invalid optionValues for " + name);
 				}
 			}
 		}
-		return new ApiEntry(name, category, str(o, "protocolHint", ""), str(o, "notes", ""),
+		String protocolHint = str(o, "protocolHint", "");
+		if (!protocolHint.matches("[A-Za-z0-9_./+-]{0,64}")) {
+			throw new IOException("invalid protocolHint for " + name);
+		}
+		return new ApiEntry(name, category, protocolHint, sanitizeNotes(str(o, "notes", "")),
 			intArg(o, "hostArgument"), intArg(o, "portArgument"), intArg(o, "optionArgument"),
 			intArg(o, "verifyModeArgument"), Collections.unmodifiableMap(optionValues));
 	}
 
-	private static String str(JsonObject o, String key, String dflt) {
+	private static String str(JsonObject o, String key, String dflt) throws IOException {
 		JsonElement e = o.get(key);
 		if (e == null || e.isJsonNull()) {
 			return dflt;
 		}
+		if (!e.isJsonPrimitive() || !e.getAsJsonPrimitive().isString()) {
+			throw new IOException("field " + key + " is not a string");
+		}
 		String s = e.getAsString();
 		return s.length() > 1024 ? s.substring(0, 1024) : s;
+	}
+
+	/** Free-text metadata is analyst-controlled and flows into every output; keep it inert. */
+	static String sanitizeNotes(String notes) {
+		String s = notes.replaceAll("[\\p{Cntrl}]+", " ").trim();
+		if (s.length() > MAX_NOTES_LENGTH) {
+			s = s.substring(0, MAX_NOTES_LENGTH);
+		}
+		return Redactor.redact(s).text();
 	}
 
 	private static int intArg(JsonObject o, String key) throws IOException {

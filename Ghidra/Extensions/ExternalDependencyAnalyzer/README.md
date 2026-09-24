@@ -63,7 +63,13 @@ Findings (rule identifiers in parentheses):
 Inside Ghidra the analyzer writes bookmarks in the category `External Dependency`,
 an end-of-line comment at each defining address and call site, a plate comment
 on functions that reference endpoints, and a program property list named
-`External Dependency Summary` that holds the counts and the full JSON result.
+`External Dependency Summary` that holds the counts and the full JSON result
+(results larger than 8 MiB are not cached; the property `Result JSON status`
+records this and the export script re-runs the scan instead of reusing it).
+All analyzer comments start with `[External Dependency]`; lines with that prefix
+are removed before each run so a rescan does not leave stale comments behind,
+while other comment lines at the same address are kept. The analyzer runs after
+Ghidra's string analyzers so that defined strings are available to scan.
 
 ## What it cannot recover
 
@@ -103,8 +109,8 @@ In a development checkout the module is picked up automatically and no
 installation is needed.
 
 The analyzer is enabled by default for ELF, PE, Mach-O and raw programs and runs
-during auto-analysis after data type propagation. It can also be run once from
-Analysis, One Shot, External Dependency Analyzer.
+late in auto-analysis (low priority), after the string analyzers. It can also be
+run once from Analysis, One Shot, External Dependency Analyzer.
 
 Analyzer options:
 
@@ -265,13 +271,13 @@ Fields:
 |---|---|---|
 | `name` | yes | symbol name; `[A-Za-z0-9_@.$?]`, at most 255 characters. Leading underscores, `__imp_` prefixes, `@n` decorations, Windows `A`/`W` suffixes and Ghidra `_0` duplicates are stripped from program symbols before matching |
 | `category` | no | `[a-z0-9_-]`, at most 32 characters; used for grouping (default `other`) |
-| `protocolHint` | no | protocol attributed to endpoints resolved at this call |
+| `protocolHint` | no | protocol attributed to endpoints resolved at this call; `[A-Za-z0-9_./+-]`, at most 64 characters |
 | `hostArgument` | no | zero-based index of a pointer argument to a string endpoint |
 | `portArgument` | no | zero-based index of an integer port argument |
 | `optionArgument` | no | zero-based index of an option selector; `hostArgument` is only used when the option name ends in `_URL` or `_PROXY` |
-| `optionValues` | no | map from selector value (decimal string) to option name |
+| `optionValues` | no | map from selector value (decimal string) to option name; names are `[A-Za-z0-9_]`, at most 64 characters |
 | `verifyModeArgument` | no | zero-based index of a TLS verification mode; 0 is reported as a finding |
-| `notes` | no | free text carried into the report |
+| `notes` | no | free text carried into the report; control characters are collapsed to spaces, the text is truncated to 256 characters and passed through the same credential redaction as recovered strings |
 
 Argument indexes must be between 0 and 31 and refer to the program's default
 calling convention; register arguments only. A custom table larger than 4 MiB or

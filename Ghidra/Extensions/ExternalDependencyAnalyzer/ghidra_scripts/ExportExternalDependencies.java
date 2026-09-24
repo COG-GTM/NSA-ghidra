@@ -144,7 +144,8 @@ public class ExportExternalDependencies extends GhidraScript {
 	static String safeName(String name) {
 		StringBuilder sb = new StringBuilder();
 		for (char c : name.toCharArray()) {
-			if (Character.isLetterOrDigit(c) || c == '.' || c == '_' || c == '-') {
+			if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+				c == '.' || c == '_' || c == '-') {
 				sb.append(c);
 			}
 			else {

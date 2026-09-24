@@ -424,27 +424,44 @@ public final class EndpointClassifier {
 		if (doubleColon >= 0 && ip.indexOf("::", doubleColon + 1) >= 0) {
 			return false;
 		}
-		String[] groups = ip.split(":", -1);
-		if (groups.length < 3 || groups.length > 8) {
+		String head = doubleColon < 0 ? ip : ip.substring(0, doubleColon);
+		String tail = doubleColon < 0 ? "" : ip.substring(doubleColon + 2);
+		int headGroups = countIpv6Groups(head);
+		int tailGroups = countIpv6Groups(tail);
+		if (headGroups < 0 || tailGroups < 0 || (doubleColon >= 0 && head.contains("."))) {
 			return false;
 		}
-		int nonEmpty = 0;
-		for (String g : groups) {
-			if (g.isEmpty()) {
-				continue;
-			}
-			nonEmpty++;
+		int groups = headGroups + tailGroups;
+		return doubleColon < 0 ? groups == 8 : groups <= 7;
+	}
+
+	/** Returns the number of 16-bit groups in a colon-separated fragment, or -1 if invalid. */
+	private static int countIpv6Groups(String fragment) {
+		if (fragment.isEmpty()) {
+			return 0;
+		}
+		String[] parts = fragment.split(":", -1);
+		int count = 0;
+		for (int i = 0; i < parts.length; i++) {
+			String g = parts[i];
 			if (g.contains(".")) {
+				if (i != parts.length - 1) {
+					return -1;
+				}
+				Matcher v4 = IPV4.matcher(g);
+				if (!v4.matches() || v4.group("port") != null) {
+					return -1;
+				}
+				count += 2;
 				continue;
 			}
-			if (g.length() > 4 || !g.chars().allMatch(ch -> Character.digit(ch, 16) >= 0)) {
-				return false;
+			if (g.isEmpty() || g.length() > 4 ||
+				!g.chars().allMatch(ch -> Character.digit(ch, 16) >= 0)) {
+				return -1;
 			}
+			count++;
 		}
-		if (doubleColon < 0 && groups.length != 8) {
-			return false;
-		}
-		return nonEmpty >= 1;
+		return count;
 	}
 
 	private static Candidate classifyHostPortList(String s) {

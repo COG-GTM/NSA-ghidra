@@ -55,7 +55,7 @@ public class ExternalDependencyAnalyzer extends AbstractAnalyzer {
 	public ExternalDependencyAnalyzer() {
 		super(NAME, DESCRIPTION, AnalyzerType.BYTE_ANALYZER);
 		setDefaultEnablement(true);
-		setPriority(AnalysisPriority.DATA_TYPE_PROPOGATION.after());
+		setPriority(AnalysisPriority.LOW_PRIORITY);
 		setSupportsOneTimeAnalysis();
 	}
 

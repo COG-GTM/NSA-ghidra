@@ -190,7 +190,7 @@ public class ExternalDependencyAnalyzerTest extends AbstractGhidraHeadlessIntegr
 		assertTrue(marks.stream().anyMatch(b -> b.getAddress().getOffset() == 0x402000));
 
 		Address conn = program.getAddressFactory().getDefaultAddressSpace().getAddress(0x402000);
-		String eol = program.getListing().getComment(CodeUnit.EOL_COMMENT, conn);
+		String eol = program.getListing().getComment(CommentType.EOL, conn);
 		assertNotNull(eol);
 		assertTrue(eol, eol.startsWith(ProgramAnnotator.COMMENT_PREFIX));
 		assertFalse(eol, eol.contains("Tr0ub4dor"));
@@ -202,10 +202,49 @@ public class ExternalDependencyAnalyzerTest extends AbstractGhidraHeadlessIntegr
 	}
 
 	@Test
+	public void testRescanClearsStaleCommentsAndKeepsAnalystComments() throws Exception {
+		runAnalyzer(ScanOptions.defaults());
+		Listing listing = program.getListing();
+		Address conn = program.getAddressFactory().getDefaultAddressSpace().getAddress(0x402000);
+		Address stale = program.getAddressFactory().getDefaultAddressSpace().getAddress(0x402100);
+		Address main = program.getAddressFactory().getDefaultAddressSpace().getAddress(0x401000);
+
+		String mainPlate = listing.getComment(CommentType.PLATE, main);
+		assertNotNull(mainPlate);
+		assertTrue(mainPlate, mainPlate.contains("references connection_string"));
+		assertTrue(mainPlate, mainPlate.contains("references url"));
+		assertFalse(mainPlate, mainPlate.contains("Tr0ub4dor"));
+
+		int tx = program.startTransaction("analyst");
+		try {
+			listing.setComment(conn, CommentType.EOL,
+				"analyst note\n" + listing.getComment(CommentType.EOL, conn));
+			listing.setComment(stale, CommentType.EOL,
+				ProgramAnnotator.COMMENT_PREFIX + " stale endpoint from an earlier run");
+			listing.setComment(main, CommentType.PLATE,
+				"keep me\n" + ProgramAnnotator.COMMENT_PREFIX + " stale plate line");
+		}
+		finally {
+			program.endTransaction(tx, true);
+		}
+
+		runAnalyzer(ScanOptions.defaults());
+		assertNull(listing.getComment(CommentType.EOL, stale));
+		String eol = listing.getComment(CommentType.EOL, conn);
+		assertTrue(eol, eol.startsWith("analyst note\n" + ProgramAnnotator.COMMENT_PREFIX));
+		assertEquals(eol, eol.indexOf(ProgramAnnotator.COMMENT_PREFIX),
+			eol.lastIndexOf(ProgramAnnotator.COMMENT_PREFIX));
+		mainPlate = listing.getComment(CommentType.PLATE, main);
+		assertTrue(mainPlate, mainPlate.startsWith("keep me\n"));
+		assertFalse(mainPlate, mainPlate.contains("stale plate line"));
+		assertTrue(mainPlate, mainPlate.contains("references connection_string"));
+	}
+
+	@Test
 	public void testCommentOptionCanBeDisabled() throws Exception {
 		runAnalyzer(ScanOptions.defaults().withWriteComments(false));
 		Address conn = program.getAddressFactory().getDefaultAddressSpace().getAddress(0x402000);
-		assertNull(program.getListing().getComment(CodeUnit.EOL_COMMENT, conn));
+		assertNull(program.getListing().getComment(CommentType.EOL, conn));
 		assertTrue(program.getBookmarkManager().getBookmarkCount() > 0);
 	}
 

@@ -30,7 +30,7 @@ public final class Redactor {
 		Pattern.compile("(?<=://)([^/@:\\s]+):([^@/\\s]+)(?=@)");
 
 	private static final Pattern KEY_VALUE = Pattern.compile(
-		"(?i)\\b(password|passwd|pwd|secret|api[_-]?key|apikey|access[_-]?token|auth[_-]?token|token|client[_-]?secret|sasl\\.password)\\s*[=:]\\s*([^;&\\s,'\"]+)");
+		"(?i)\\b(password|passwd|pwd|secret|api[_-]?key|apikey|access[_-]?token|auth[_-]?token|token|client[_-]?secret|sasl\\.password)\\s*[=:]\\s*(?:'[^']*'|\"[^\"]*\"|\\{[^}]*\\}|[^;&\\s,'\"]+)");
 
 	private static final Pattern BEARER =
 		Pattern.compile("(?i)\\b(Bearer|Basic|Token|ApiKey)\\s+([A-Za-z0-9._~+/=-]{8,})");

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -82,6 +83,10 @@ public class ExportExternalDependenciesHeadlessTest extends AbstractGhidraHeadle
 	}
 
 	private static Path runHeadless(String... scriptArgs) throws IOException {
+		return runHeadless(fixture, scriptArgs);
+	}
+
+	private static Path runHeadless(File binary, String... scriptArgs) throws IOException {
 		Path project = Files.createTempDirectory("edproj");
 		Path output = Files.createTempDirectory("edout");
 		String[] args = new String[scriptArgs.length + 1];
@@ -95,8 +100,24 @@ public class ExportExternalDependenciesHeadlessTest extends AbstractGhidraHeadle
 		options.setPostScriptsWithArgs(List.of(new generic.stl.Pair<>(SCRIPT, args)));
 		options.setDeleteCreatedProjectOnClose(true);
 		options.enableAnalysis(true);
-		headless.processLocal(project.toString(), "fixture", "/", List.of(fixture));
+		headless.processLocal(project.toString(), "fixture", "/", List.of(binary));
 		return output;
+	}
+
+	@Test
+	public void testOutputFileNamesAreAsciiOnly() throws Exception {
+		Path dir = Files.createTempDirectory("edname");
+		File odd = dir.resolve("fixt\u00fcre \u03b5\u03bb$name.bin").toFile();
+		Files.copy(fixture.toPath(), odd.toPath());
+		Path out = runHeadless(odd);
+		List<String> names = new ArrayList<>();
+		try (var stream = Files.list(out)) {
+			stream.map(p -> p.getFileName().toString()).sorted().forEach(names::add);
+		}
+		assertEquals(List.of("fixt_re____name.bin-dependencies.json",
+			"fixt_re____name.bin-dependencies.md"), names);
+		String json = Files.readString(out.resolve(names.get(0)), StandardCharsets.UTF_8);
+		assertEquals(odd.getName(), DependencyReportReader.fromJson(json).program().name());
 	}
 
 	private static String read(Path dir, String suffix) throws IOException {

@@ -96,21 +96,27 @@ public final class DependencyReportReader {
 			for (JsonElement e : arr(root, "findings")) {
 				JsonObject o = asObject(e, "finding");
 				requireKeys(o, FINDING_KEYS, "finding");
-				findings.add(new Finding(severity(str(o, "severity")), str(o, "rule"),
+				findings.add(new Finding(severity(str(o, "severity")), rule(str(o, "rule")),
 					str(o, "address"), str(o, "function"), str(o, "detail")));
 			}
 
 			JsonObject s = obj(root, "summary");
 			requireKeys(s, SUMMARY_KEYS, "summary");
-			if (s.get("endpointCount").getAsInt() != endpoints.size() ||
-				s.get("apiCallSiteCount").getAsInt() != sites.size() ||
-				s.get("findingCount").getAsInt() != findings.size()) {
+			if (!isCount(s.get("endpointCount"), endpoints.size()) ||
+				!isCount(s.get("apiCallSiteCount"), sites.size()) ||
+				!isCount(s.get("findingCount"), findings.size())) {
 				throw new IOException("summary counts do not match content");
 			}
 			List<String> warnings = strings(arr(s, "warnings"));
-			return new ScanResult(info, Collections.unmodifiableList(endpoints),
+			ScanResult result = new ScanResult(info, Collections.unmodifiableList(endpoints),
 				Collections.unmodifiableList(sites), Collections.unmodifiableList(findings),
 				Collections.unmodifiableList(warnings));
+			requireCounts(obj(s, "endpointsByKind"), result.countsByKind(), "endpointsByKind");
+			requireCounts(obj(s, "findingsBySeverity"), result.countsBySeverity(),
+				"findingsBySeverity");
+			requireCounts(obj(s, "apiCallSitesByCategory"), result.countsByApiCategory(),
+				"apiCallSitesByCategory");
+			return result;
 		}
 		catch (JsonParseException | IllegalStateException | UnsupportedOperationException |
 				NumberFormatException e) {
@@ -186,6 +192,32 @@ public final class DependencyReportReader {
 			}
 		}
 		throw new IOException("unknown confidence");
+	}
+
+	private static String rule(String s) throws IOException {
+		for (Rule r : Rule.values()) {
+			if (r.jsonName().equals(s)) {
+				return s;
+			}
+		}
+		throw new IOException("unknown finding rule");
+	}
+
+	private static void requireCounts(JsonObject actual, Map<String, Integer> expected,
+			String where) throws IOException {
+		if (!actual.keySet().equals(expected.keySet())) {
+			throw new IOException(where + " keys do not match content");
+		}
+		for (Map.Entry<String, Integer> e : expected.entrySet()) {
+			if (!isCount(actual.get(e.getKey()), e.getValue())) {
+				throw new IOException(where + " counts do not match content");
+			}
+		}
+	}
+
+	private static boolean isCount(JsonElement v, int expected) {
+		return v != null && v.isJsonPrimitive() && v.getAsJsonPrimitive().isNumber() &&
+			v.getAsString().equals(Integer.toString(expected));
 	}
 
 	private static Severity severity(String s) throws IOException {

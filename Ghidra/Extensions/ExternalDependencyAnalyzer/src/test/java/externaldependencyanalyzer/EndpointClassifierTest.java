@@ -107,6 +107,25 @@ public class EndpointClassifierTest extends AbstractGenericTest {
 	}
 
 	@Test
+	public void testIpv6EmbeddedIpv4TailIsValidated() {
+		String[] valid = { "::ffff:10.20.30.40", "0:0:0:0:0:ffff:10.20.30.40", "64:ff9b::192.0.2.33",
+			"2001:db8:0:0:0:0:0:1", "2001:db8::", "::1" };
+		for (String s : valid) {
+			assertTrue(s, EndpointClassifier.isPlausibleIpv6(s));
+		}
+		String[] invalid = { "::ffff:999.999.999.999", "::ffff:1.2.3", "::ffff:1.2.3.4:5",
+			"::1.2.3.4:ffff", "1.2.3.4::ffff", "2001:db8:0:0:0:0:0:0:1", "2001:db8:0:0:0:0:1",
+			"2001:db8::1::2", "2001:db8::12345", "2001:db8::ffff:1.2.3.4:1" };
+		for (String s : invalid) {
+			assertFalse(s, EndpointClassifier.isPlausibleIpv6(s));
+		}
+		for (Candidate c : EndpointClassifier.classify("::ffff:999.999.999.999", 2)) {
+			assertNotEquals(EndpointKind.IPV6, c.kind());
+			assertNotEquals(EndpointKind.HOST_PORT, c.kind());
+		}
+	}
+
+	@Test
 	public void testBrokerBootstrapAndFileShares() {
 		Candidate kafka = one("kafka1.example.test:9092,kafka2.example.test:9092");
 		assertEquals(EndpointKind.CONNECTION_STRING, kafka.kind());
