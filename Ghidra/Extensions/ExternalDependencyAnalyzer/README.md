@@ -162,7 +162,7 @@ Options after the output directory:
 
 | Option | Effect |
 |---|---|
-| `--reuse` | use the result stored by a previous analyzer run instead of scanning again; the stored result is only reused when its fingerprint (scan options, minimum string length, API table content, executable hash, language, function/instruction/data counts and memory layout) matches the current request, otherwise the program is rescanned |
+| `--reuse` | use the result stored by a previous analyzer run instead of scanning again; the stored result is only reused when its fingerprint (scan options, minimum string length, API table content, executable hash, language, and SHA-256 digests of initialized memory bytes, functions, instructions, defined data, symbols and references) matches the current request, otherwise the program is rescanned; computing the fingerprint is a single linear pass over the program and is cheaper than a rescan |
 | `--api-table=<path>` | analyst-supplied API table replacing the bundled one |
 | `--min-string-length=<n>` | ignore strings shorter than `n` characters (clamped to 2 to 256) |
 | `--no-comments` | do not write comments into the program |
