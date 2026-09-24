@@ -825,7 +825,7 @@ public final class DependencyScanner {
 			}
 			len++;
 		}
-		if (len == 0 || len >= n) {
+		if (len == 0 || len >= MAX_RAW_STRING) {
 			return null;
 		}
 		return new String(buf, 0, len, StandardCharsets.US_ASCII);

@@ -24,9 +24,13 @@ import ghidra.program.model.data.VoidDataType;
 import ghidra.program.model.lang.PrototypeModel;
 import ghidra.program.model.lang.Register;
 import ghidra.program.model.listing.*;
+import ghidra.program.model.mem.Memory;
+import ghidra.program.model.mem.MemoryAccessException;
+import ghidra.program.model.mem.MemoryBlock;
 import ghidra.program.model.pcode.PcodeOp;
 import ghidra.program.model.pcode.Varnode;
 import ghidra.program.model.scalar.Scalar;
+import ghidra.program.model.symbol.RefType;
 import ghidra.program.model.symbol.Reference;
 import ghidra.program.util.ContextEvaluatorAdapter;
 import ghidra.program.util.SymbolicPropogator;
@@ -180,11 +184,21 @@ final class ArgumentResolver {
 	}
 
 	private Resolved valueWrittenBy(Instruction instr, Register reg) {
+		int loadSize = loadSize(instr);
 		for (Reference ref : instr.getReferencesFrom()) {
-			if (ref.isMemoryReference() && ref.getToAddress().isMemoryAddress() &&
-				!ref.getReferenceType().isFlow()) {
-				return new Resolved(ref.getToAddress().getOffset(), false);
+			RefType type = ref.getReferenceType();
+			if (!ref.isMemoryReference() || !ref.getToAddress().isMemoryAddress() ||
+				type.isFlow()) {
+				continue;
 			}
+			if (type.isWrite()) {
+				return null;
+			}
+			if (type.isRead() || loadSize > 0) {
+				return constantLoadedFrom(ref.getToAddress(), loadSize > 0 ? loadSize
+						: program.getDefaultPointerSize());
+			}
+			return new Resolved(ref.getToAddress().getOffset(), false);
 		}
 		String mnemonic = instr.getMnemonicString().toLowerCase(Locale.ROOT);
 		int n = instr.getNumOperands();
@@ -195,8 +209,8 @@ final class ArgumentResolver {
 				return new Resolved(0, false);
 			}
 		}
-		if (mnemonic.startsWith("mov") || mnemonic.equals("li") || mnemonic.equals("ldr") ||
-			mnemonic.equals("lea")) {
+		if (loadSize == 0 && (mnemonic.startsWith("mov") || mnemonic.equals("li") ||
+			mnemonic.equals("ldr") || mnemonic.equals("lea"))) {
 			for (int i = 1; i < n; i++) {
 				for (Object o : instr.getOpObjects(i)) {
 					if (o instanceof Scalar s) {
@@ -220,5 +234,37 @@ final class ArgumentResolver {
 			}
 		}
 		return null;
+	}
+
+	private static int loadSize(Instruction instr) {
+		for (PcodeOp op : instr.getPcode()) {
+			if (op.getOpcode() == PcodeOp.LOAD && op.getOutput() != null) {
+				return op.getOutput().getSize();
+			}
+		}
+		return 0;
+	}
+
+	private Resolved constantLoadedFrom(Address addr, int size) {
+		Memory memory = program.getMemory();
+		MemoryBlock block = memory.getBlock(addr);
+		if (block == null || !block.isInitialized() || block.isWrite() || size < 1 || size > 8) {
+			return null;
+		}
+		byte[] buf = new byte[size];
+		try {
+			if (memory.getBytes(addr, buf) != size) {
+				return null;
+			}
+		}
+		catch (MemoryAccessException e) {
+			return null;
+		}
+		long v = 0;
+		for (int i = 0; i < size; i++) {
+			int idx = memory.isBigEndian() ? i : size - 1 - i;
+			v = (v << 8) | (buf[idx] & 0xffL);
+		}
+		return new Resolved(v, false);
 	}
 }

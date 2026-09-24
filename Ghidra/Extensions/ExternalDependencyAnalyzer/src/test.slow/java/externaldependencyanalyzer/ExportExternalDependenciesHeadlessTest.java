@@ -23,9 +23,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -49,6 +52,7 @@ public class ExportExternalDependenciesHeadlessTest extends AbstractGhidraHeadle
 
 	private static File scriptsDir;
 	private static File fixture;
+	private static Map<String, File> optionalFixtures;
 
 	@Before
 	public void buildFixture() throws Exception {
@@ -72,14 +76,23 @@ public class ExportExternalDependenciesHeadlessTest extends AbstractGhidraHeadle
 		assertEquals("fixture build failed:\n" + log, 0, p.exitValue());
 
 		File built = null;
+		Map<String, File> optional = new LinkedHashMap<>();
 		for (String line : log.split("\\R")) {
-			if (line.startsWith("elf-x86_64 ") && !line.contains("SKIPPED")) {
-				built = new File(line.substring("elf-x86_64 ".length()).trim());
+			String[] parts = line.trim().split("\\s+", 2);
+			if (parts.length != 2 || parts[1].startsWith("SKIPPED")) {
+				continue;
+			}
+			if (parts[0].equals("elf-x86_64")) {
+				built = new File(parts[1]);
+			}
+			else if (parts[0].equals("elf-aarch64") || parts[0].equals("pe-x86_64")) {
+				optional.put(parts[0], new File(parts[1]));
 			}
 		}
 		assertNotNull("builder did not report an ELF fixture:\n" + log, built);
 		assertTrue(built.isFile());
 		fixture = built;
+		optionalFixtures = optional;
 	}
 
 	private static Path runHeadless(String... scriptArgs) throws IOException {
@@ -191,6 +204,39 @@ public class ExportExternalDependenciesHeadlessTest extends AbstractGhidraHeadle
 
 		assertTrue(md.startsWith("# External dependencies: " + fixture.getName()));
 		assertTrue(md.contains("tiles-standby.example-geo.internal"));
+	}
+
+	@Test
+	public void testOptionalToolchainFixturesRecoverPlantedItems() throws Exception {
+		Assume.assumeFalse("no AArch64 or MinGW cross compiler on this machine; only the " +
+			"x86-64 ELF fixture was built", optionalFixtures.isEmpty());
+		for (Map.Entry<String, File> e : optionalFixtures.entrySet()) {
+			File binary = e.getValue();
+			assertTrue(binary.getPath(), binary.isFile());
+			Path out = runHeadless(binary);
+			Path jsonFile = out.resolve(binary.getName() + "-dependencies.json");
+			assertTrue(e.getKey() + ": missing " + jsonFile, Files.isRegularFile(jsonFile));
+			String json = Files.readString(jsonFile, StandardCharsets.UTF_8);
+			ScanResult r = DependencyReportReader.fromJson(json);
+
+			String expectedFormat = e.getKey().startsWith("pe-") ? "Portable Executable" : "ELF";
+			assertTrue(e.getKey() + ": " + r.program().format(),
+				r.program().format().contains(expectedFormat));
+			if (e.getKey().equals("elf-aarch64")) {
+				assertTrue(r.program().arch(), r.program().arch().startsWith("AARCH64:LE:64"));
+			}
+			endpoint(r, EndpointKind.HOSTNAME, "tiles.example-geo.internal");
+			endpoint(r, EndpointKind.HOSTNAME, "tiles-standby.example-geo.internal");
+			endpoint(r, EndpointKind.IPV4, "10.20.30.40");
+			endpoint(r, EndpointKind.URL,
+				"http://tiles.example-geo.internal/wms?SERVICE=WMS&REQUEST=GetCapabilities");
+			Endpoint db = endpoint(r, EndpointKind.CONNECTION_STRING,
+				"postgresql://svc_user:" + Redactor.MASK + "@db.example-geo.internal:5432/tiles");
+			assertEquals(List.of("open_database"), db.referencingFunctions());
+			assertFalse(e.getKey() + ": secret leaked into JSON", json.contains("Tr0ub4dor"));
+			assertTrue(r.apiCallSites().stream().anyMatch(c -> c.api().equals("PQconnectdb")));
+			assertTrue(hasFinding(r, Rule.HARDCODED_CREDENTIAL, "open_database"));
+		}
 	}
 
 	@Test

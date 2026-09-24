@@ -35,6 +35,7 @@ public final class ApiTable {
 
 	private static final int MAX_FILE_BYTES = 4 * 1024 * 1024;
 	private static final int MAX_NOTES_LENGTH = 256;
+	private static final List<String> DECORATIONS = List.of("imp_", "thunk_");
 
 	/** One recognised API. Argument indices are zero-based; -1 means "not applicable". */
 	public record ApiEntry(String name, String category, String protocolHint, String notes,
@@ -105,17 +106,18 @@ public final class ApiTable {
 		if (at > 0) {
 			n = n.substring(0, at);
 		}
-		while (n.startsWith("_") && n.length() > 1) {
-			n = n.substring(1);
-		}
-		if (n.startsWith("__imp_")) {
-			n = n.substring(6);
-		}
-		if (n.startsWith("imp_")) {
-			n = n.substring(4);
-		}
-		if (n.startsWith("thunk_")) {
-			n = n.substring(6);
+		boolean changed = true;
+		while (changed && n.length() > 1) {
+			changed = false;
+			while (n.startsWith("_") && n.length() > 1) {
+				n = n.substring(1);
+			}
+			for (String prefix : DECORATIONS) {
+				if (n.startsWith(prefix) && n.length() > prefix.length()) {
+					n = n.substring(prefix.length());
+					changed = true;
+				}
+			}
 		}
 		return n;
 	}
@@ -142,11 +144,8 @@ public final class ApiTable {
 				if (!f.isFile() || !f.canRead()) {
 					throw new IOException("not a readable file");
 				}
-				if (f.length() > MAX_FILE_BYTES) {
-					throw new IOException("file exceeds size limit");
-				}
 				try (InputStream in = new FileInputStream(f)) {
-					return load(in, f.getAbsolutePath());
+					return load(readBounded(in), f.getAbsolutePath());
 				}
 			}
 			catch (IOException | RuntimeException e) {
@@ -162,6 +161,14 @@ public final class ApiTable {
 			warnings.add("API table unavailable; API call sites were not scanned");
 			return new ApiTable("none");
 		}
+	}
+
+	static InputStream readBounded(InputStream in) throws IOException {
+		byte[] data = in.readNBytes(MAX_FILE_BYTES + 1);
+		if (data.length > MAX_FILE_BYTES) {
+			throw new IOException("file exceeds size limit");
+		}
+		return new ByteArrayInputStream(data);
 	}
 
 	static ApiTable load(InputStream in, String source) throws IOException {

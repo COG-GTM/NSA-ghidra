@@ -69,7 +69,12 @@ records this and the export script re-runs the scan instead of reusing it).
 All analyzer comments start with `[External Dependency]`; lines with that prefix
 are removed before each run so a rescan does not leave stale comments behind,
 while other comment lines at the same address are kept. The analyzer runs after
-Ghidra's string analyzers so that defined strings are available to scan.
+Ghidra's string analyzers so that defined strings are available to scan. Each
+run scans the whole program rather than only the addresses that changed:
+duplicate-host findings, nearest-call linkage and the summary counts are
+program-wide, and the cached JSON result is replaced as a unit. Ghidra
+coalesces the address sets queued for an analyzer, so a normal auto-analysis
+pass triggers one scan.
 
 ## What it cannot recover
 
@@ -293,8 +298,11 @@ fixture compiled at test time from `ghidra_scripts/ExportExternalDependencies_fi
 by `ExportExternalDependencies_build_fixture.py`. The fixture is built with the
 system `gcc` for x86-64 ELF; AArch64 (`aarch64-linux-gnu-gcc`) and PE
 (`x86_64-w64-mingw32-gcc`) variants are built when those compilers are present
-and skipped with a message otherwise. No compiled fixture is committed and no
-fixture is executed.
+and skipped with a message otherwise. When an optional variant is built, the
+headless test also imports it and checks the planted hosts, URL, redacted
+connection string and credential finding; when none is built that test is
+reported as skipped. No compiled fixture is committed and no fixture is
+executed.
 
 ```
 gradle -p Ghidra/Extensions/ExternalDependencyAnalyzer test integrationTest

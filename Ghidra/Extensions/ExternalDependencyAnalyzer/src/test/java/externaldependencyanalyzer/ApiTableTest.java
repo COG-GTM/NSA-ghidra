@@ -103,7 +103,13 @@ public class ApiTableTest extends AbstractGenericTest {
 	public void testSymbolDecorationsAreNormalized() throws IOException {
 		ApiTable t = bundled();
 		assertNotNull(t.lookup("__imp_connect"));
+		assertNotNull(t.lookup("__imp__connect"));
+		assertNotNull(t.lookup("__imp__WSAConnect@16"));
+		assertNotNull(t.lookup("thunk___imp__connect"));
 		assertNotNull(t.lookup("_connect"));
+		assertEquals("connect", ApiTable.normalize("__imp__connect"));
+		assertEquals("_", ApiTable.normalize("_"));
+		assertEquals("imp_", ApiTable.normalize("imp_"));
 		assertNotNull(t.lookup("connect@GLIBC_2.2.5"));
 		assertNotNull(t.lookup("connect@@GLIBC_2.2.5"));
 		assertNotNull(t.lookup("InternetOpenUrlA"));
@@ -176,5 +182,20 @@ public class ApiTableTest extends AbstractGenericTest {
 		warnings.clear();
 		ApiTable.loadOrDefault("/definitely/not/here.json", warnings);
 		assertEquals(1, warnings.size());
+	}
+
+	@Test
+	public void testOversizedTableIsRejectedByBytesRead() throws IOException {
+		int limit = 4 * 1024 * 1024;
+		byte[] small = "{\"apis\":[]}".getBytes(StandardCharsets.UTF_8);
+		InputStream ok = ApiTable.readBounded(new ByteArrayInputStream(small));
+		assertArrayEquals(small, ok.readAllBytes());
+		try {
+			ApiTable.readBounded(new ByteArrayInputStream(new byte[limit + 1]));
+			fail("accepted oversized table");
+		}
+		catch (IOException expected) {
+			assertFalse(expected.getMessage().contains("/"));
+		}
 	}
 }

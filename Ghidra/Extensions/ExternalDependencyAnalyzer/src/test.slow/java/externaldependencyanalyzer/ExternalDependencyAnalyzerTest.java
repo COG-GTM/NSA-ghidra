@@ -33,6 +33,7 @@ import ghidra.program.model.address.Address;
 import ghidra.program.model.address.AddressSet;
 import ghidra.program.model.data.TerminatedStringDataType;
 import ghidra.program.model.listing.*;
+import ghidra.program.model.mem.MemoryBlock;
 import ghidra.test.AbstractGhidraHeadlessIntegrationTest;
 import ghidra.util.task.TaskMonitor;
 
@@ -253,6 +254,70 @@ public class ExternalDependencyAnalyzerTest extends AbstractGhidraHeadlessIntegr
 		String first = DependencyReportWriter.toJson(runAnalyzer(ScanOptions.defaults()));
 		String second = DependencyReportWriter.toJson(runAnalyzer(ScanOptions.defaults()));
 		assertEquals(first, second);
+	}
+
+	@Test
+	public void testMemoryLoadsAreNotTreatedAsPointerArguments() throws Exception {
+		// Writable .data holds raw hostname bytes; read-only .rodata holds a pointer to a
+		// second raw hostname that runs to the end of the block with no terminator. Neither
+		// is a defined string, so each can only surface through argument resolution.
+		MemoryBlock data = builder.createMemory(".data", "0x403000", 0x100);
+		builder.setWrite(data, true);
+		builder.setBytes("0x403000", ascii("db-shadow.example.test") + " 00");
+		builder.setBytes("0x402100", "e9 21 40 00 00 00 00 00");
+		builder.setBytes("0x4021e9", ascii("db-standby.example.test"));
+
+		// loader at 0x401040:
+		//   mov rdi,[rip+X] -> 0x403000        48 8b 3d disp32   (7 bytes, ends 0x401047)
+		//   call 0x401100                      e8 rel32          (5 bytes, ends 0x40104c)
+		//   mov rdi,[rip+Y] -> 0x402100        48 8b 3d disp32   (7 bytes, ends 0x401053)
+		//   call 0x401100                      e8 rel32          (5 bytes, ends 0x401058)
+		//   ret                                c3
+		String code = "48 8b 3d " + le32(0x403000 - 0x401047) + "e8 " + le32(0x401100 - 0x40104c) +
+			"48 8b 3d " + le32(0x402100 - 0x401053) + "e8 " + le32(0x401100 - 0x401058) + "c3";
+		builder.setBytes("0x401040", code, true);
+		builder.createFunction("0x401040");
+		builder.createLabel("0x401040", "loader");
+
+		ScanResult r = runAnalyzer(ScanOptions.defaults());
+		List<String> values = r.endpoints().stream().map(Endpoint::value).toList();
+
+		// The load from writable memory is not a constant: the call site says so and the
+		// .data string (which Ghidra defines because the load references it) is only linked
+		// heuristically, never as a resolved argument.
+		ApiCallSite first = r.apiCallSites().stream().filter(
+			c -> c.address().equals("00401047")).findFirst().orElseThrow();
+		assertTrue(first.notes().toString(),
+			first.notes().contains("endpoint argument not a constant"));
+		for (Endpoint e : r.endpoints()) {
+			if (e.value().equals("db-shadow.example.test")) {
+				assertTrue(e.notes().toString(),
+					e.notes().stream().noneMatch(n -> n.startsWith("passed as argument")));
+				assertTrue(e.nearestNetworkCall().heuristic());
+			}
+			assertFalse(e.value(), e.value().contains("403000"));
+		}
+
+		Endpoint standby = r.endpoints().stream().filter(
+			e -> e.value().equals("db-standby.example.test")).findFirst().orElseThrow(
+				() -> new AssertionError("pointer loaded from read-only memory not resolved: " +
+					values));
+		assertEquals(EndpointKind.HOSTNAME, standby.kind());
+		assertEquals("004021e9", standby.address());
+		assertEquals(List.of("loader"), standby.referencingFunctions());
+		assertTrue(standby.notes().toString(),
+			standby.notes().contains("passed as argument 0 to PQconnectdb at 00401053"));
+		assertNotNull(standby.nearestNetworkCall());
+		assertEquals("PQconnectdb", standby.nearestNetworkCall().api());
+		assertEquals("00401053", standby.nearestNetworkCall().address());
+	}
+
+	private static String ascii(String s) {
+		StringBuilder sb = new StringBuilder();
+		for (byte b : s.getBytes(StandardCharsets.US_ASCII)) {
+			sb.append(String.format("%02x ", b));
+		}
+		return sb.toString().trim();
 	}
 
 	private static Endpoint find(ScanResult r, EndpointKind kind) {
