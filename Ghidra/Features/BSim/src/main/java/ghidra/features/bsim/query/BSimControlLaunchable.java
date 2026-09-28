@@ -468,6 +468,10 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 			if (password == null) {
 				throw new IOException("Unable to obtain password");
 			}
+			if (password.length == 0) {
+				System.out.println("Password cannot be empty");
+				continue;
+			}
 			char[] repeatPass = requestPassword("Please re-enter password:");
 			boolean match = comparePasswordData(password, repeatPass);
 			clearPasswordData(repeatPass);
@@ -1157,31 +1161,40 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 		StringBuilder resultMessage = new StringBuilder();
 		resultMessage.append("Added user: ");
 		resultMessage.append(specifiedUserName);
-		boolean resetPassword = (hostAuthentication == AUTHENTICATION_PASSWORD);
+		boolean setPassword = (hostAuthentication == AUTHENTICATION_PASSWORD);
 
 		adminPasswordData = null;
 
 		localConnection = getOrCreateLocalConnection();
 
-		StringBuilder buffer = new StringBuilder();
-		buffer.append("CREATE ROLE \"");
-		buffer.append(specifiedUserName);
-		buffer.append("\" WITH LOGIN");
-
-		try (Statement st = localConnection.createStatement()) {
-			st.executeUpdate(buffer.toString());
-		}
-		catch (SQLException err) {
-			if (!err.getMessage().contains("already exists")) {		// Suppress already exists error message
-				throw err;
+		char[] newPassword = null;
+		try {
+			if (setPassword) {
+				newPassword = requestVerifiedPassword(
+					"Set password for user " + specifiedUserName + ":");
 			}
-			resultMessage.append(" (already present)");				// Record that user is already added
-			resetPassword = false;
+
+			StringBuilder buffer = new StringBuilder();
+			buffer.append("CREATE ROLE \"");
+			buffer.append(specifiedUserName);
+			buffer.append("\" WITH LOGIN");
+
+			try (Statement st = localConnection.createStatement()) {
+				st.executeUpdate(buffer.toString());
+			}
+			catch (SQLException err) {
+				if (!err.getMessage().contains("already exists")) {		// Suppress already exists error message
+					throw err;
+				}
+				resultMessage.append(" (already present)");				// Record that user is already added
+				setPassword = false;
+			}
+			if (setPassword) {
+				setRolePassword(localConnection, specifiedUserName, newPassword);
+			}
 		}
 		finally {
-			if (resetPassword) {
-				resetPassword(localConnection, specifiedUserName);
-			}
+			clearPasswordData(newPassword);
 			localConnection.close();
 		}
 
@@ -1363,6 +1376,31 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 	}
 
 	/**
+	 * Set the password for -username- to the given password
+	 * @param pdb is the connection over which to issue the command
+	 * @param username is the user name whose password is set
+	 * @param password is the new password
+	 * @throws SQLException if the sql query fails
+	 */
+	private static void setRolePassword(Connection pdb, String username, char[] password)
+			throws SQLException {
+		StringBuilder buffer = new StringBuilder();
+		buffer.append("ALTER ROLE \"");
+		buffer.append(username);
+		buffer.append("\" WITH PASSWORD E'");
+		// Escape-string literal: backslash and quote are always escape-prefixed,
+		// independent of the server's standard_conforming_strings setting
+		for (char c : password) {
+			if (c == '\\' || c == '\'') {
+				buffer.append('\\');
+			}
+			buffer.append(c);
+		}
+		buffer.append('\'');
+		executeSQLStatement(pdb, buffer.toString());
+	}
+
+	/**
 	 * Reset the password for -username- to a new password requested interactively from
 	 * the administrator issuing the command.
 	 * @param pdb is the connection over which to issue the command
@@ -1374,18 +1412,7 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 			throws SQLException, IOException {
 		char[] newPassword = requestVerifiedPassword("Set password for user " + username + ":");
 		try {
-			StringBuilder buffer = new StringBuilder();
-			buffer.append("ALTER ROLE \"");
-			buffer.append(username);
-			buffer.append("\" WITH PASSWORD '");
-			for (char c : newPassword) {
-				if (c == '\'') {
-					buffer.append('\'');
-				}
-				buffer.append(c);
-			}
-			buffer.append('\'');
-			executeSQLStatement(pdb, buffer.toString());
+			setRolePassword(pdb, username, newPassword);
 		}
 		finally {
 			clearPasswordData(newPassword);
