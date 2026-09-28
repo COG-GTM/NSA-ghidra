@@ -149,17 +149,19 @@ public class GThemeTest extends AbstractGenericTest {
 	@Test
 	public void testLoadingZipThemeRejectsEntriesOutsideSettingsDir() throws IOException {
 		File settingsDir = Application.getUserSettingsDirectory().getCanonicalFile();
-		File escapedFile = new File(settingsDir.getParentFile(), "zipSlipTest.txt");
+		String name = "zipSlipTest" + System.nanoTime() + ".txt";
+		File escapedFile = new File(settingsDir.getParentFile(), name);
 
-		assertZipThemeRejected("abc.theme/images/../../zipSlipTest.txt", escapedFile);
+		assertZipThemeRejected("abc.theme/images/../../" + name, escapedFile);
 	}
 
 	@Test
 	public void testLoadingZipThemeRejectsEntriesOutsideImagesDir() throws IOException {
 		File settingsDir = Application.getUserSettingsDirectory().getCanonicalFile();
-		File escapedFile = new File(settingsDir, "zipSlipTest.txt");
+		String name = "zipSlipTest" + System.nanoTime() + ".txt";
+		File escapedFile = new File(settingsDir, name);
 
-		assertZipThemeRejected("abc.theme/images/../zipSlipTest.txt", escapedFile);
+		assertZipThemeRejected("abc.theme/images/../" + name, escapedFile);
 	}
 
 	@Test
