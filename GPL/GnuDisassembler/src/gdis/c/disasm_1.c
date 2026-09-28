@@ -41,16 +41,32 @@ void listSupportedArchMachTargets(void)
 
 
 
+/* Format into the "stream" scratch buffer and append the result to
+ * disassembled_buffer, never writing past either buffer's fixed size.
+ * Returns the length the fragment would have had if not truncated, as
+ * libopcodes expects from a printf-style callback.  */
+static int append_disassembly_fragment (SFILE *f, const char *format, va_list args)
+{
+	int n;
+	size_t pos = f->pos < BUFF_SIZE ? f->pos : BUFF_SIZE - 1;
+	size_t used = strlen(disassembled_buffer);
+
+	n = vsnprintf (f->buffer + pos, BUFF_SIZE - pos, format, args);
+	if (n >= 0 && used < BUFF_SIZE - 1) {
+		strncat(disassembled_buffer, f->buffer + pos, BUFF_SIZE - 1 - used);
+	}
+
+	return n;
+}
+
 /* sprintf to a "stream".  */
 int objdump_sprintf (SFILE *f, const char *format, ...)
 {
-
 	int n;
 	va_list args;
 
 	va_start (args, format);
-	n = vsnprintf (f->buffer + f->pos, BUFF_SIZE, format, args);
-	strncat(disassembled_buffer, f->buffer, n);
+	n = append_disassembly_fragment (f, format, args);
 	va_end (args);
 
 	return n;
@@ -62,8 +78,7 @@ int objdump_sprintf_styled(SFILE *f, enum disassembler_style style, const char *
 	va_list args;
 
 	va_start (args, format);
-	n = vsnprintf (f->buffer + f->pos, BUFF_SIZE, format, args);
-	strncat(disassembled_buffer, f->buffer, n);
+	n = append_disassembly_fragment (f, format, args);
 	va_end (args);
 
 	return n;
@@ -176,7 +191,10 @@ int disassemble_buffer( disassembler_ftype disassemble_fn,
 		pDisInfo->target = info->target;
 		pDisInfo->target2 = info->target2;
 
-		strcat(&(pDisInfo->disassemblyString[0]), disassembled_buffer);
+		len = strlen(pDisInfo->disassemblyString);
+		if (len < MAX_DIS_STRING - 1) {
+			strncat(pDisInfo->disassemblyString, disassembled_buffer, MAX_DIS_STRING - 1 - len);
+		}
 		memset(disassembled_buffer, 0x00, BUFF_SIZE);
 
 		if(size != 0){
