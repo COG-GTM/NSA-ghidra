@@ -84,6 +84,9 @@ class ThemeReader extends AbstractThemeReader {
 				}
 			}
 		}
+		if (theme == null) {
+			throw new IOException("Invalid Theme file: " + file);
+		}
 		return theme;
 	}
 
@@ -134,10 +137,15 @@ class ThemeReader extends AbstractThemeReader {
 		int indexOf = path.indexOf("images/");
 		if (indexOf < 0) {
 			Msg.error(this, "Unknown file: " + path);
+			return;
 		}
 		String relativePath = path.substring(indexOf, path.length());
 		File dir = Application.getUserSettingsDirectory();
-		File iconFile = new File(dir, relativePath);
+		File imagesDir = new File(dir, "images").getCanonicalFile();
+		File iconFile = new File(dir, relativePath).getCanonicalFile();
+		if (iconFile.equals(imagesDir) || !iconFile.toPath().startsWith(imagesDir.toPath())) {
+			throw new IOException("Invalid theme icon path: " + path);
+		}
 		FileUtils.copyInputStreamToFile(is, iconFile);
 	}
 
