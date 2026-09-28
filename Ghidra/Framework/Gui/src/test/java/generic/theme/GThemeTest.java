@@ -19,8 +19,9 @@ import static org.junit.Assert.*;
 
 import java.awt.Color;
 import java.awt.Font;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.swing.Icon;
 
@@ -28,6 +29,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import generic.test.AbstractGenericTest;
+import ghidra.framework.Application;
 import resources.ResourceManager;
 
 public class GThemeTest extends AbstractGenericTest {
@@ -123,6 +125,57 @@ public class GThemeTest extends AbstractGenericTest {
 		assertEquals(ICON2, theme.getIcon("icon.a.2").get(theme));
 		assertEquals(ICON1, theme.getIcon("t.u.v").get(theme));
 		assertEquals(ICON1, theme.getIcon("t.u.v.1").get(theme));
+	}
+
+	@Test
+	public void testLoadingZipThemeWritesIconsToSettingsDir() throws IOException {
+		File settingsDir = Application.getUserSettingsDirectory().getCanonicalFile();
+		File iconFile = new File(settingsDir, "images/zipThemeTestIcon.png");
+		iconFile.delete();
+
+		File zipFile = createTempFile("themeTest", ".theme.zip");
+		writeZipTheme(zipFile, "abc.theme/images/zipThemeTestIcon.png");
+
+		theme = new ThemeReader(zipFile).readTheme();
+		assertEquals("abc", theme.getName());
+		assertTrue(iconFile.exists());
+		iconFile.delete();
+	}
+
+	@Test
+	public void testLoadingZipThemeRejectsEntriesOutsideSettingsDir() throws IOException {
+		File settingsDir = Application.getUserSettingsDirectory().getCanonicalFile();
+		File escapedFile = new File(settingsDir.getParentFile(), "zipSlipTest.txt");
+		escapedFile.delete();
+
+		File zipFile = createTempFile("themeTest", ".theme.zip");
+		writeZipTheme(zipFile, "abc.theme/images/../../zipSlipTest.txt");
+
+		try {
+			new ThemeReader(zipFile).readTheme();
+			fail("Expected IOException for zip entry that escapes the settings directory");
+		}
+		catch (IOException e) {
+			// expected
+		}
+		assertFalse(escapedFile.exists());
+	}
+
+	private void writeZipTheme(File zipFile, String iconEntryName) throws IOException {
+		try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
+			zos.putNextEntry(new ZipEntry("abc.theme/abc.theme"));
+			Writer writer = new OutputStreamWriter(zos);
+			writer.write(ThemeWriter.THEME_NAME_KEY + " = abc\n");
+			writer.write(ThemeWriter.THEME_LOOK_AND_FEEL_KEY + " = " +
+				LafType.getDefaultLookAndFeel().getName() + "\n");
+			writer.write(ThemeWriter.THEME_USE_DARK_DEFAULTS + " = false\n");
+			writer.flush();
+			zos.closeEntry();
+
+			zos.putNextEntry(new ZipEntry(iconEntryName));
+			zos.write(new byte[] { 1, 2, 3 });
+			zos.closeEntry();
+		}
 	}
 
 }
