@@ -1189,7 +1189,11 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 				resultMessage.append(" (already present)");				// Record that user is already added
 				setPassword = false;
 			}
-			if (setPassword && newPassword != null) {
+			if (setPassword) {
+				if (newPassword == null) {	// Role was dropped between the existence check and CREATE ROLE
+					newPassword = requestVerifiedPassword(
+						"Set password for user " + specifiedUserName + ":");
+				}
 				setRolePassword(localConnection, specifiedUserName, newPassword);
 			}
 		}
