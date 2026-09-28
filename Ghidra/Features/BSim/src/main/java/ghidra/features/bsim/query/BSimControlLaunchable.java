@@ -127,7 +127,6 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 	private final static String CERTIFICATE_OPTIONS = "map=mymap clientcert=verify-full";
 //	private final static String CERTIFICATE_OPTIONS = "map=mymap clientcert=1";     // For PKI certificates prior to PostgreSQL 12
 	private final static String POSTGRES_MAP_IDENTIFIER = "mymap";
-	private final static String DEFAULT_PASSWORD = "changeme";
 	private final static int AUTHENTICATION_NONE = 0;
 	private final static int AUTHENTICATION_PASSWORD = 1;
 	private final static int AUTHENTICATION_PKI = 2;
@@ -457,6 +456,34 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 	}
 
 	/**
+	 * Request a new password from the user, requiring the user to re-enter the password
+	 * until the two entries match.
+	 * @param prompt is the prompt presented to the user for the initial entry
+	 * @return the password characters
+	 * @throws IOException if the password cannot be obtained
+	 */
+	private char[] requestVerifiedPassword(String prompt) throws IOException {
+		for (;;) {
+			char[] password = requestPassword(prompt);
+			if (password == null) {
+				throw new IOException("Unable to obtain password");
+			}
+			if (password.length == 0) {
+				System.out.println("Password cannot be empty");
+				continue;
+			}
+			char[] repeatPass = requestPassword("Please re-enter password:");
+			boolean match = comparePasswordData(password, repeatPass);
+			clearPasswordData(repeatPass);
+			if (match) {
+				return password;
+			}
+			clearPasswordData(password);
+			System.out.println("Passwords do not match");
+		}
+	}
+
+	/**
 	 * (For a new postgres server) Establish an administrative password, by requesting the password
 	 * from the user, and then having the user re-enter the password. The password is stored in
 	 * the character array -adminPasswordData- and written to the file -passwordFile-
@@ -464,20 +491,8 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 	 * @throws IOException if there is a problem obtaining the password
 	 */
 	private void establishAdminPassword() throws IOException {
-		for (;;) {
-			adminPasswordData = requestPassword("Set admin(" + connectingUserName + ") password:");
-			if (adminPasswordData == null) {
-				throw new IOException("Unable to obtain password");
-			}
-			char[] repeatPass = requestPassword("Please re-enter password:");
-			boolean match = comparePasswordData(adminPasswordData, repeatPass);
-			clearPasswordData(repeatPass);
-			if (match) {
-				break;
-			}
-			cleanupPasswordData();
-			System.out.println("Passwords do not match");
-		}
+		adminPasswordData =
+			requestVerifiedPassword("Set admin(" + connectingUserName + ") password:");
 		passwordFile = Files
 				.createTempFile("bsim", ".dat",
 					PosixFilePermissions
@@ -1146,31 +1161,58 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 		StringBuilder resultMessage = new StringBuilder();
 		resultMessage.append("Added user: ");
 		resultMessage.append(specifiedUserName);
-		boolean resetPassword = (hostAuthentication == AUTHENTICATION_PASSWORD);
+		boolean setPassword = (hostAuthentication == AUTHENTICATION_PASSWORD);
 
 		adminPasswordData = null;
 
 		localConnection = getOrCreateLocalConnection();
 
-		StringBuilder buffer = new StringBuilder();
-		buffer.append("CREATE ROLE \"");
-		buffer.append(specifiedUserName);
-		buffer.append("\" WITH LOGIN");
-
-		try (Statement st = localConnection.createStatement()) {
-			st.executeUpdate(buffer.toString());
-		}
-		catch (SQLException err) {
-			if (!err.getMessage().contains("already exists")) {		// Suppress already exists error message
-				throw err;
+		char[] newPassword = null;
+		try {
+			if (setPassword && !roleExists(localConnection, specifiedUserName)) {
+				newPassword = requestVerifiedPassword(
+					"Set password for user " + specifiedUserName + ":");
 			}
-			resultMessage.append(" (already present)");				// Record that user is already added
-			resetPassword = false;
+
+			StringBuilder buffer = new StringBuilder();
+			buffer.append("CREATE ROLE \"");
+			buffer.append(specifiedUserName);
+			buffer.append("\" WITH LOGIN");
+
+			// Create the role and set its password in one transaction so a failure
+			// to obtain the password never leaves a passwordless role behind
+			localConnection.setAutoCommit(false);
+			boolean committed = false;
+			try {
+				try (Statement st = localConnection.createStatement()) {
+					st.executeUpdate(buffer.toString());
+				}
+				catch (SQLException err) {
+					if (!err.getMessage().contains("already exists")) {		// Suppress already exists error message
+						throw err;
+					}
+					localConnection.rollback();
+					resultMessage.append(" (already present)");				// Record that user is already added
+					setPassword = false;
+				}
+				if (setPassword) {
+					if (newPassword == null) {	// Role was dropped between the existence check and CREATE ROLE
+						newPassword = requestVerifiedPassword(
+							"Set password for user " + specifiedUserName + ":");
+					}
+					setRolePassword(localConnection, specifiedUserName, newPassword);
+				}
+				localConnection.commit();
+				committed = true;
+			}
+			finally {
+				if (!committed && !localConnection.isClosed()) {
+					localConnection.rollback();
+				}
+			}
 		}
 		finally {
-			if (resetPassword) {
-				resetPassword(localConnection, specifiedUserName);
-			}
+			clearPasswordData(newPassword);
 			localConnection.close();
 		}
 
@@ -1352,19 +1394,64 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 	}
 
 	/**
-	 * Reset the password for -username- to DEFAULT_PASSWORD
-	 * @param pdb is the connection over which to issue the command
-	 * @param username is the user name to reset
+	 * Determine whether a role with the given name already exists on the server
+	 * @param pdb is the connection over which to issue the query
+	 * @param username is the role name to look up
+	 * @return true if the role exists
 	 * @throws SQLException if the sql query fails
 	 */
-	private void resetPassword(Connection pdb, String username) throws SQLException {
+	private static boolean roleExists(Connection pdb, String username) throws SQLException {
+		try (PreparedStatement st =
+			pdb.prepareStatement("SELECT 1 FROM pg_roles WHERE rolname = ?")) {
+			st.setString(1, username);
+			try (ResultSet rs = st.executeQuery()) {
+				return rs.next();
+			}
+		}
+	}
+
+	/**
+	 * Set the password for -username- to the given password
+	 * @param pdb is the connection over which to issue the command
+	 * @param username is the user name whose password is set
+	 * @param password is the new password
+	 * @throws SQLException if the sql query fails
+	 */
+	private static void setRolePassword(Connection pdb, String username, char[] password)
+			throws SQLException {
 		StringBuilder buffer = new StringBuilder();
 		buffer.append("ALTER ROLE \"");
 		buffer.append(username);
-		buffer.append("\" WITH PASSWORD '");
-		buffer.append(DEFAULT_PASSWORD);
+		buffer.append("\" WITH PASSWORD E'");
+		// Escape-string literal: backslash and quote are always escape-prefixed,
+		// independent of the server's standard_conforming_strings setting
+		for (char c : password) {
+			if (c == '\\' || c == '\'') {
+				buffer.append('\\');
+			}
+			buffer.append(c);
+		}
 		buffer.append('\'');
 		executeSQLStatement(pdb, buffer.toString());
+	}
+
+	/**
+	 * Reset the password for -username- to a new password requested interactively from
+	 * the administrator issuing the command.
+	 * @param pdb is the connection over which to issue the command
+	 * @param username is the user name to reset
+	 * @throws SQLException if the sql query fails
+	 * @throws IOException if the new password cannot be obtained
+	 */
+	private void resetPassword(Connection pdb, String username)
+			throws SQLException, IOException {
+		char[] newPassword = requestVerifiedPassword("Set password for user " + username + ":");
+		try {
+			setRolePassword(pdb, username, newPassword);
+		}
+		finally {
+			clearPasswordData(newPassword);
+		}
 	}
 
 	/**
