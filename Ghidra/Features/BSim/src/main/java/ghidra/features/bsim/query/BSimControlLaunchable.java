@@ -1169,7 +1169,7 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 
 		char[] newPassword = null;
 		try {
-			if (setPassword) {
+			if (setPassword && !roleExists(localConnection, specifiedUserName)) {
 				newPassword = requestVerifiedPassword(
 					"Set password for user " + specifiedUserName + ":");
 			}
@@ -1189,7 +1189,7 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 				resultMessage.append(" (already present)");				// Record that user is already added
 				setPassword = false;
 			}
-			if (setPassword) {
+			if (setPassword && newPassword != null) {
 				setRolePassword(localConnection, specifiedUserName, newPassword);
 			}
 		}
@@ -1373,6 +1373,23 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 		}
 
 		tuneConfig(configCopy, configFile, hbaCopy, hbaFile, serverConfigFile);
+	}
+
+	/**
+	 * Determine whether a role with the given name already exists on the server
+	 * @param pdb is the connection over which to issue the query
+	 * @param username is the role name to look up
+	 * @return true if the role exists
+	 * @throws SQLException if the sql query fails
+	 */
+	private static boolean roleExists(Connection pdb, String username) throws SQLException {
+		try (PreparedStatement st =
+			pdb.prepareStatement("SELECT 1 FROM pg_roles WHERE rolname = ?")) {
+			st.setString(1, username);
+			try (ResultSet rs = st.executeQuery()) {
+				return rs.next();
+			}
+		}
 	}
 
 	/**
