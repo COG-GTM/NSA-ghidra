@@ -84,6 +84,9 @@ class ThemeReader extends AbstractThemeReader {
 				}
 			}
 		}
+		if (theme == null) {
+			throw new IOException("Invalid Theme file: " + file);
+		}
 		return theme;
 	}
 
@@ -137,9 +140,10 @@ class ThemeReader extends AbstractThemeReader {
 			return;
 		}
 		String relativePath = path.substring(indexOf, path.length());
-		File dir = Application.getUserSettingsDirectory().getCanonicalFile();
+		File dir = Application.getUserSettingsDirectory();
+		File imagesDir = new File(dir, "images").getCanonicalFile();
 		File iconFile = new File(dir, relativePath).getCanonicalFile();
-		if (!iconFile.toPath().startsWith(dir.toPath())) {
+		if (iconFile.equals(imagesDir) || !iconFile.toPath().startsWith(imagesDir.toPath())) {
 			throw new IOException("Invalid theme icon path: " + path);
 		}
 		FileUtils.copyInputStreamToFile(is, iconFile);

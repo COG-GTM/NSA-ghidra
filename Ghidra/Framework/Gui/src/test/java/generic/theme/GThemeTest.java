@@ -128,51 +128,88 @@ public class GThemeTest extends AbstractGenericTest {
 	}
 
 	@Test
-	public void testLoadingZipThemeWritesIconsToSettingsDir() throws IOException {
+	public void testLoadingZipThemeWritesIconsToImagesDir() throws IOException {
 		File settingsDir = Application.getUserSettingsDirectory().getCanonicalFile();
-		File iconFile = new File(settingsDir, "images/zipThemeTestIcon.png");
-		iconFile.delete();
+		String iconName = "zipThemeTestIcon" + System.nanoTime() + ".png";
+		File iconFile = new File(settingsDir, "images/" + iconName);
 
 		File zipFile = createTempFile("themeTest", ".theme.zip");
-		writeZipTheme(zipFile, "abc.theme/images/zipThemeTestIcon.png");
+		writeZipTheme(zipFile, true, "abc.theme/images/" + iconName);
 
-		theme = new ThemeReader(zipFile).readTheme();
-		assertEquals("abc", theme.getName());
-		assertTrue(iconFile.exists());
-		iconFile.delete();
+		try {
+			theme = new ThemeReader(zipFile).readTheme();
+			assertEquals("abc", theme.getName());
+			assertTrue(iconFile.exists());
+		}
+		finally {
+			iconFile.delete();
+		}
 	}
 
 	@Test
 	public void testLoadingZipThemeRejectsEntriesOutsideSettingsDir() throws IOException {
 		File settingsDir = Application.getUserSettingsDirectory().getCanonicalFile();
 		File escapedFile = new File(settingsDir.getParentFile(), "zipSlipTest.txt");
-		escapedFile.delete();
 
+		assertZipThemeRejected("abc.theme/images/../../zipSlipTest.txt", escapedFile);
+	}
+
+	@Test
+	public void testLoadingZipThemeRejectsEntriesOutsideImagesDir() throws IOException {
+		File settingsDir = Application.getUserSettingsDirectory().getCanonicalFile();
+		File escapedFile = new File(settingsDir, "zipSlipTest.txt");
+
+		assertZipThemeRejected("abc.theme/images/../zipSlipTest.txt", escapedFile);
+	}
+
+	@Test
+	public void testLoadingZipThemeWithoutThemeEntryFails() throws IOException {
 		File zipFile = createTempFile("themeTest", ".theme.zip");
-		writeZipTheme(zipFile, "abc.theme/images/../../zipSlipTest.txt");
+		writeZipTheme(zipFile, false, "abc.theme/notes.txt");
 
 		try {
 			new ThemeReader(zipFile).readTheme();
-			fail("Expected IOException for zip entry that escapes the settings directory");
+			fail("Expected IOException for zip without a .theme entry");
 		}
 		catch (IOException e) {
 			// expected
 		}
-		assertFalse(escapedFile.exists());
 	}
 
-	private void writeZipTheme(File zipFile, String iconEntryName) throws IOException {
-		try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
-			zos.putNextEntry(new ZipEntry("abc.theme/abc.theme"));
-			Writer writer = new OutputStreamWriter(zos);
-			writer.write(ThemeWriter.THEME_NAME_KEY + " = abc\n");
-			writer.write(ThemeWriter.THEME_LOOK_AND_FEEL_KEY + " = " +
-				LafType.getDefaultLookAndFeel().getName() + "\n");
-			writer.write(ThemeWriter.THEME_USE_DARK_DEFAULTS + " = false\n");
-			writer.flush();
-			zos.closeEntry();
+	private void assertZipThemeRejected(String iconEntryName, File escapedFile)
+			throws IOException {
+		File zipFile = createTempFile("themeTest", ".theme.zip");
+		writeZipTheme(zipFile, true, iconEntryName);
 
-			zos.putNextEntry(new ZipEntry(iconEntryName));
+		try {
+			new ThemeReader(zipFile).readTheme();
+			fail("Expected IOException for zip entry: " + iconEntryName);
+		}
+		catch (IOException e) {
+			// expected
+		}
+		finally {
+			boolean escaped = escapedFile.exists();
+			escapedFile.delete();
+			assertFalse("File written outside images dir: " + escapedFile, escaped);
+		}
+	}
+
+	private void writeZipTheme(File zipFile, boolean includeThemeEntry, String otherEntryName)
+			throws IOException {
+		try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
+			if (includeThemeEntry) {
+				zos.putNextEntry(new ZipEntry("abc.theme/abc.theme"));
+				Writer writer = new OutputStreamWriter(zos);
+				writer.write(ThemeWriter.THEME_NAME_KEY + " = abc\n");
+				writer.write(ThemeWriter.THEME_LOOK_AND_FEEL_KEY + " = " +
+					LafType.getDefaultLookAndFeel().getName() + "\n");
+				writer.write(ThemeWriter.THEME_USE_DARK_DEFAULTS + " = false\n");
+				writer.flush();
+				zos.closeEntry();
+			}
+
+			zos.putNextEntry(new ZipEntry(otherEntryName));
 			zos.write(new byte[] { 1, 2, 3 });
 			zos.closeEntry();
 		}
