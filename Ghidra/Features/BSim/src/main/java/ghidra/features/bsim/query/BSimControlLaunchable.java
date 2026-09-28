@@ -1179,22 +1179,36 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 			buffer.append(specifiedUserName);
 			buffer.append("\" WITH LOGIN");
 
-			try (Statement st = localConnection.createStatement()) {
-				st.executeUpdate(buffer.toString());
-			}
-			catch (SQLException err) {
-				if (!err.getMessage().contains("already exists")) {		// Suppress already exists error message
-					throw err;
+			// Create the role and set its password in one transaction so a failure
+			// to obtain the password never leaves a passwordless role behind
+			localConnection.setAutoCommit(false);
+			boolean committed = false;
+			try {
+				try (Statement st = localConnection.createStatement()) {
+					st.executeUpdate(buffer.toString());
 				}
-				resultMessage.append(" (already present)");				// Record that user is already added
-				setPassword = false;
-			}
-			if (setPassword) {
-				if (newPassword == null) {	// Role was dropped between the existence check and CREATE ROLE
-					newPassword = requestVerifiedPassword(
-						"Set password for user " + specifiedUserName + ":");
+				catch (SQLException err) {
+					if (!err.getMessage().contains("already exists")) {		// Suppress already exists error message
+						throw err;
+					}
+					localConnection.rollback();
+					resultMessage.append(" (already present)");				// Record that user is already added
+					setPassword = false;
 				}
-				setRolePassword(localConnection, specifiedUserName, newPassword);
+				if (setPassword) {
+					if (newPassword == null) {	// Role was dropped between the existence check and CREATE ROLE
+						newPassword = requestVerifiedPassword(
+							"Set password for user " + specifiedUserName + ":");
+					}
+					setRolePassword(localConnection, specifiedUserName, newPassword);
+				}
+				localConnection.commit();
+				committed = true;
+			}
+			finally {
+				if (!committed && !localConnection.isClosed()) {
+					localConnection.rollback();
+				}
 			}
 		}
 		finally {
