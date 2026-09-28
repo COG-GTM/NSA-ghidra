@@ -127,7 +127,6 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 	private final static String CERTIFICATE_OPTIONS = "map=mymap clientcert=verify-full";
 //	private final static String CERTIFICATE_OPTIONS = "map=mymap clientcert=1";     // For PKI certificates prior to PostgreSQL 12
 	private final static String POSTGRES_MAP_IDENTIFIER = "mymap";
-	private final static String DEFAULT_PASSWORD = "changeme";
 	private final static int AUTHENTICATION_NONE = 0;
 	private final static int AUTHENTICATION_PASSWORD = 1;
 	private final static int AUTHENTICATION_PKI = 2;
@@ -457,6 +456,30 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 	}
 
 	/**
+	 * Request a new password from the user, requiring the user to re-enter the password
+	 * until the two entries match.
+	 * @param prompt is the prompt presented to the user for the initial entry
+	 * @return the password characters
+	 * @throws IOException if the password cannot be obtained
+	 */
+	private char[] requestVerifiedPassword(String prompt) throws IOException {
+		for (;;) {
+			char[] password = requestPassword(prompt);
+			if (password == null) {
+				throw new IOException("Unable to obtain password");
+			}
+			char[] repeatPass = requestPassword("Please re-enter password:");
+			boolean match = comparePasswordData(password, repeatPass);
+			clearPasswordData(repeatPass);
+			if (match) {
+				return password;
+			}
+			clearPasswordData(password);
+			System.out.println("Passwords do not match");
+		}
+	}
+
+	/**
 	 * (For a new postgres server) Establish an administrative password, by requesting the password
 	 * from the user, and then having the user re-enter the password. The password is stored in
 	 * the character array -adminPasswordData- and written to the file -passwordFile-
@@ -464,20 +487,8 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 	 * @throws IOException if there is a problem obtaining the password
 	 */
 	private void establishAdminPassword() throws IOException {
-		for (;;) {
-			adminPasswordData = requestPassword("Set admin(" + connectingUserName + ") password:");
-			if (adminPasswordData == null) {
-				throw new IOException("Unable to obtain password");
-			}
-			char[] repeatPass = requestPassword("Please re-enter password:");
-			boolean match = comparePasswordData(adminPasswordData, repeatPass);
-			clearPasswordData(repeatPass);
-			if (match) {
-				break;
-			}
-			cleanupPasswordData();
-			System.out.println("Passwords do not match");
-		}
+		adminPasswordData =
+			requestVerifiedPassword("Set admin(" + connectingUserName + ") password:");
 		passwordFile = Files
 				.createTempFile("bsim", ".dat",
 					PosixFilePermissions
@@ -1352,19 +1363,33 @@ public class BSimControlLaunchable implements GhidraLaunchable {
 	}
 
 	/**
-	 * Reset the password for -username- to DEFAULT_PASSWORD
+	 * Reset the password for -username- to a new password requested interactively from
+	 * the administrator issuing the command.
 	 * @param pdb is the connection over which to issue the command
 	 * @param username is the user name to reset
 	 * @throws SQLException if the sql query fails
+	 * @throws IOException if the new password cannot be obtained
 	 */
-	private void resetPassword(Connection pdb, String username) throws SQLException {
-		StringBuilder buffer = new StringBuilder();
-		buffer.append("ALTER ROLE \"");
-		buffer.append(username);
-		buffer.append("\" WITH PASSWORD '");
-		buffer.append(DEFAULT_PASSWORD);
-		buffer.append('\'');
-		executeSQLStatement(pdb, buffer.toString());
+	private void resetPassword(Connection pdb, String username)
+			throws SQLException, IOException {
+		char[] newPassword = requestVerifiedPassword("Set password for user " + username + ":");
+		try {
+			StringBuilder buffer = new StringBuilder();
+			buffer.append("ALTER ROLE \"");
+			buffer.append(username);
+			buffer.append("\" WITH PASSWORD '");
+			for (char c : newPassword) {
+				if (c == '\'') {
+					buffer.append('\'');
+				}
+				buffer.append(c);
+			}
+			buffer.append('\'');
+			executeSQLStatement(pdb, buffer.toString());
+		}
+		finally {
+			clearPasswordData(newPassword);
+		}
 	}
 
 	/**

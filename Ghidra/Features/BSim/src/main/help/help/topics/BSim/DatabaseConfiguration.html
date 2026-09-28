@@ -316,8 +316,8 @@
                     <P><CODE class="computeroutput">bsim_ctl start /path/to/datadir
                     --auth&nbsp;password</CODE></P>
 
-                    <P>Users are authenticated via password. A default password 'changeme' is
-                    established when the new user is created. Passwords can be changed by the user
+                    <P>Users are authenticated via password. The administrator is prompted to
+                    set an initial password when the new user is created. Passwords can be changed by the user
                     from the BSim client or can be reset by an administrator via the <SPAN class=
                     "command"><STRONG>resetpassword</STRONG></SPAN> command.</P>
                   </DD>
@@ -416,8 +416,8 @@
               </TABLE>
             </DIV>
 
-            <P>If password authentication has been set for the server, the new user's password will
-            initially be set to 'changeme'. If PKI authentication has been set for the server, The
+            <P>If password authentication has been set for the server, the administrator will be
+            prompted to set (and confirm) the new user's initial password. If PKI authentication has been set for the server, The
             Distinguished Name, as bound to the new user's certificated must be provided when
             issuing the <SPAN class="command"><STRONG>adduser</STRONG></SPAN> command, via the
             <SPAN class="command"><STRONG>--dn</STRONG></SPAN> option. The Distinguished Name must
