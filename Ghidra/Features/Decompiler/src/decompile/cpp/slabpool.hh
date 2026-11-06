@@ -38,14 +38,16 @@ namespace ghidra {
 /// \brief Reusable raw storage; callers manage object construction and destruction
 template<class T> class SlabPool {
   struct FreeSlot { FreeSlot *next; };
+  struct Slab { void *storage; std::size_t capacity; };
   static const std::size_t slabSize = 1024;
-  std::vector<void *> slabs;
+  std::vector<Slab> slabs;
+  std::size_t capacity;
   std::size_t used;
   FreeSlot *freeList;
   SlabPool(const SlabPool &) = delete;
   SlabPool &operator=(const SlabPool &) = delete;
 public:
-  SlabPool(void) : used(slabSize), freeList(nullptr) {
+  SlabPool(void) : capacity(32), used(32), freeList(nullptr) {
     static_assert(sizeof(T) >= sizeof(FreeSlot), "Object too small for free list");
     static_assert(alignof(T) >= alignof(FreeSlot), "Object alignment too small for free list");
   }
@@ -59,20 +61,22 @@ public:
       freeList = slot->next;
       return slot;
     }
-    if (used == slabSize) {
-      void *slab = ::operator new(slabSize * sizeof(T));
+    if (used == capacity) {
+      std::size_t nextCapacity = slabs.empty() ? 32 : (capacity < slabSize ? capacity * 2 : slabSize);
+      void *slab = ::operator new(nextCapacity * sizeof(T));
       try {
-        slabs.push_back(slab);
+        slabs.push_back(Slab{slab, nextCapacity});
       } catch (...) {
         ::operator delete(slab);
         throw;
       }
 #ifdef GHIDRA_SLAB_ASAN
-      ASAN_POISON_MEMORY_REGION(slab, slabSize * sizeof(T));
+      ASAN_POISON_MEMORY_REGION(slab, nextCapacity * sizeof(T));
 #endif
+      capacity = nextCapacity;
       used = 0;
     }
-    void *slot = static_cast<char *>(slabs.back()) + used++ * sizeof(T);
+    void *slot = static_cast<char *>(slabs.back().storage) + used++ * sizeof(T);
 #ifdef GHIDRA_SLAB_ASAN
     ASAN_UNPOISON_MEMORY_REGION(slot, sizeof(T));
 #endif
@@ -87,14 +91,15 @@ public:
 #endif
   }
   void reset(void) {
-    for(void *slab : slabs) {
+    for(const Slab &slab : slabs) {
 #ifdef GHIDRA_SLAB_ASAN
-      ASAN_UNPOISON_MEMORY_REGION(slab, slabSize * sizeof(T));
+      ASAN_UNPOISON_MEMORY_REGION(slab.storage, slab.capacity * sizeof(T));
 #endif
-      ::operator delete(slab);
+      ::operator delete(slab.storage);
     }
     slabs.clear();
-    used = slabSize;
+    capacity = 32;
+    used = capacity;
     freeList = nullptr;
   }
 };
