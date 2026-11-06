@@ -941,7 +941,7 @@ void PcodeOpBank::clearCodeLists(void)
 PcodeOp *PcodeOpBank::create(int4 inputs,const Address &pc)
 
 {
-  PcodeOp *op = new PcodeOp(inputs,SeqNum(pc,uniqid++));
+  PcodeOp *op = new(pool.allocate()) PcodeOp(inputs,SeqNum(pc,uniqid++));
   optree[op->getSeqNum()] = op;
   op->setFlag(PcodeOp::dead);		// Start out life as dead
   op->insertiter = deadlist.insert(deadlist.end(),op);
@@ -958,7 +958,7 @@ PcodeOp *PcodeOpBank::create(int4 inputs,const SeqNum &sq)
 
 {
   PcodeOp *op;
-  op = new PcodeOp(inputs,sq);
+  op = new(pool.allocate()) PcodeOp(inputs,sq);
   if (sq.getTime() >= uniqid)
     uniqid = sq.getTime() + 1;
 
@@ -1197,11 +1197,12 @@ void PcodeOpBank::clear(void)
   list<PcodeOp *>::iterator iter;
 
   for(iter=alivelist.begin();iter!=alivelist.end();++iter)
-    delete *iter;
+    (*iter)->~PcodeOp();
   for(iter=deadlist.begin();iter!=deadlist.end();++iter)
-    delete *iter;
+    (*iter)->~PcodeOp();
   for(iter=deadandgone.begin();iter!=deadandgone.end();++iter)
-    delete *iter;
+    (*iter)->~PcodeOp();
+  pool.reset();
   optree.clear();
   alivelist.clear();
   deadlist.clear();

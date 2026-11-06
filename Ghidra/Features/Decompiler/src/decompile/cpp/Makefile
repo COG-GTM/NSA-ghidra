@@ -149,7 +149,7 @@ LIBSLA_DBG_OBJS=$(LIBSLA_NAMES:%=com_dbg/%.o)
 LIBSLA_OPT_OBJS=$(LIBSLA_NAMES:%=com_opt/%.o)
 LIBSLA_SOURCE=$(LIBSLA_NAMES:%=%.cc) $(LIBSLA_NAMES:%=%.hh) \
 	$(SLACOMP:%=%.cc) slgh_compile.hh slghparse.hh types.h \
-	partmap.hh error.hh slghparse.y pcodeparse.y xml.y slghscan.l loadimage_bfd.hh loadimage_bfd.cc
+	partmap.hh error.hh slabpool.hh slghparse.y pcodeparse.y xml.y slghscan.l loadimage_bfd.hh loadimage_bfd.cc
 LIBDECOMP_DBG_OBJS=$(LIBDECOMP_NAMES:%=com_dbg/%.o)
 LIBDECOMP_OPT_OBJS=$(LIBDECOMP_NAMES:%=com_opt/%.o)
 

@@ -1233,7 +1233,9 @@ void VarnodeBank::clear(void)
   VarnodeLocSet::iterator iter;
 
   for(iter=loc_tree.begin();iter!=loc_tree.end();++iter)
-    delete *iter;
+    (*iter)->~Varnode();
+
+  pool.reset();
 
   loc_tree.clear();
   def_tree.clear();
@@ -1250,7 +1252,7 @@ void VarnodeBank::clear(void)
 Varnode *VarnodeBank::create(int4 s,const Address &m,Datatype *ct)
 
 {
-  Varnode *vn = new Varnode(s,m,ct);
+  Varnode *vn = new(pool.allocate()) Varnode(s,m,ct);
   
   vn->create_index = create_index++;
   vn->lociter = loc_tree.insert(vn).first; // Frees can always be inserted without duplication
@@ -1281,7 +1283,8 @@ void VarnodeBank::destroy(Varnode *vn)
 
   loc_tree.erase(vn->lociter);
   def_tree.erase(vn->defiter);
-  delete vn;
+  vn->~Varnode();
+  pool.release(vn);
 }
 
 /// Enter the Varnode into both the \e location and \e definition based trees.
@@ -1298,7 +1301,8 @@ Varnode *VarnodeBank::xref(Varnode *vn)
   if (!check.second) {		// Set already contains this varnode
     othervn = *(check.first);
     replace(vn,othervn); // Patch ops using the old varnode
-    delete vn;
+    vn->~Varnode();
+    pool.release(vn);
     return othervn;
   }
 				// Otherwise a new insertion
@@ -1411,7 +1415,7 @@ Varnode *VarnodeBank::setDef(Varnode *vn,PcodeOp *op)
 Varnode *VarnodeBank::createDef(int4 s,const Address &m, Datatype *ct,PcodeOp *op)
 
 {
-  Varnode *vn = new Varnode(s,m,ct);
+  Varnode *vn = new(pool.allocate()) Varnode(s,m,ct);
   vn->create_index = create_index++;
   vn->setDef(op);
   return xref(vn);

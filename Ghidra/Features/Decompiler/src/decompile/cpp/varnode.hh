@@ -20,6 +20,7 @@
 
 #include "pcoderaw.hh"
 #include "cover.hh"
+#include "slabpool.hh"
 
 namespace ghidra {
 
@@ -363,6 +364,7 @@ public:
 /// temporary Varnode objects in the \e unique space. Constants are created
 /// by passing a constant address to the create() method.
 class VarnodeBank {
+  SlabPool<Varnode> pool;
   AddrSpaceManager *manage;	///< Underlying address space manager
   AddrSpace *uniq_space;	///< Space to allocate unique varnodes from
   uintm uniqbase;		///< Base for unique addresses
